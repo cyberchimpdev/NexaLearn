@@ -1,105 +1,245 @@
-# NexaLearn — AI-Powered Learning Gap Detector
+# NexaLearn
 
-NexaLearn is a human-centered AI learning recovery platform built for teachers and students.
-It helps teachers create diagnostic tests, analyzes student mistakes using a Python AI Agent, detects weak concepts, generates personalized revision tasks, and groups students with similar learning gaps for targeted remediation.
+## AI-Powered Learning Gap Detector & Personalized Learning Recovery Platform
 
-> Core idea: Students do not hate learning; they often hate learning in a format that does not connect with them. NexaLearn turns academic content into personalized, interest-based learning recovery while keeping teachers in control.
+NexaLearn is a full-stack education platform designed to help teachers identify student learning gaps and help students recover through personalized AI-generated feedback, revision tasks, and interest-based explanations.
 
----
+The system allows teachers to create diagnostic tests, students to submit answers, and an AI Agent to analyze mistakes, weak concepts, and learning needs within seconds.
 
-## Project Summary
-
-NexaLearn solves three major education pain points:
-
-1. **Low engagement with traditional study material**
-2. **Abstract concepts feeling disconnected from real life**
-3. **Teachers lacking time to personalize learning for every student**
-
-The platform allows teachers to create class-wise diagnostic tests. Students attempt those tests, and the AI Agent analyzes every answer to identify:
-
-- Correctness
-- Score
-- Mistake type
-- Weak concept
-- Reason for the mistake
-- Correct solution
-- Personalized revision task
-- Interest-based explanation
-
-Teachers then receive reports, weak-topic analytics, mistake distribution, and remedial student groups.
+Developed for an education-focused hackathon using React, Tailwind CSS, Python, Django, and AI Agent support.
 
 ---
 
-## Main Features
+## 1. Executive Summary
 
-### Teacher Features
+Many students do not hate learning; they struggle because the learning format does not connect with them. Traditional study material often feels boring, abstract, and disconnected from real life.
 
-- Secure teacher registration and login
-- Teacher dashboard
-- Create class-wise diagnostic tests
-- Add questions with correct answers and marks
-- View student submissions
-- See class average performance
-- Detect common weak topics
-- View mistake type distribution
-- Generate remedial groups
-- Track student improvement over time
+Teachers also face difficulty identifying every student’s exact weakness because manually checking answers, analyzing mistakes, and preparing personalized revision tasks takes too much time.
 
-### Student Features
+NexaLearn addresses this problem by providing:
 
-- Secure student registration and login
-- Student dashboard
-- Set learning preferences and interests
-- Attempt assigned tests
-- Submit written or objective answers
-- Receive AI-generated feedback
-- View weak concepts
-- Get personalized revision tasks
-- Receive interest-based explanations
-- Use Gemini-powered AI chatbot for study support
-
-### AI Agent Features
-
-- Answer checking
-- Mistake diagnosis
+- Diagnostic test creation
+- AI-based answer analysis
 - Weak concept detection
-- Marks allocation
-- Revision task generation
-- Class-wise explanation adaptation
-- Interest-based explanation generation
-- Teacher report support
-- Remedial group recommendation
+- Mistake type identification
+- Personalized revision tasks
+- Interest-based explanations
+- Teacher reports and remedial groups
+- Gemini-powered study chatbot support
 
-### Gemini Chatbot Features
-
-- Floating bottom-right chatbot icon
-- Compact professional popup UI
-- Student study support
-- Connected through Django backend
-- API key never exposed in frontend
-- Works as a support feature, not the main product
+The platform is built with a scalable full-stack architecture using React, Tailwind CSS, Django REST Framework, and AI Agent logic.
 
 ---
 
-## Unique Selling Point
+## 2. My Role & Contribution
 
-Most education tools give students generic content or basic chatbot answers. NexaLearn focuses on **learning recovery**.
+Frontend Development, UI/UX Design, Backend Planning & AI Workflow Structuring
 
-It does not only say whether an answer is wrong. It identifies **why** the student is wrong, what concept is weak, what type of mistake happened, and what the student should revise next.
+Primary responsibilities:
 
-NexaLearn also personalizes explanations using student interests such as:
+- Designed and implemented the React frontend using Vite
+- Built reusable frontend components
+- Structured pages, layouts, routes, services, and context folders
+- Designed a modern Tailwind CSS-based user interface
+- Planned teacher and student dashboard flows
+- Integrated frontend service layer for backend API communication
+- Added AI chatbot UI as a floating bottom-right assistant
+- Structured the AI Agent workflow for answer analysis and feedback
+- Planned backend modules using Django and Django REST Framework
 
-- Anime power systems
-- Cricket strategies
-- Gaming levels
-- Movie stories
+My focus was on creating a clean, modern, responsive, and hackathon-ready learning platform that is easy for teachers and students to use.
+
+---
+
+## 3. System Architecture Overview
+
+The system follows a modular full-stack architecture:
+
+```txt
+Frontend (React + Tailwind CSS)
+        ↓
+Django REST API
+        ↓
+Database + Python AI Agent
+        ↓
+Gemini API Chatbot Support
+```
+
+Key Components:
+
+- Teacher dashboard
+- Student dashboard
+- Diagnostic test module
+- Attempt submission module
+- AI answer analysis system
+- Weak concept detection
+- Revision task generator
+- Floating AI chatbot
+- Teacher reporting system
+
+---
+
+## 4. Core Functional Modules
+
+### 4.1 Diagnostic Test System
+
+Teachers can create class-wise diagnostic tests to check student understanding.
+
+Main Features:
+
+- Create tests
+- Add questions
+- Assign marks
+- Manage class-wise assessment
+- View submitted attempts
+
+Expected Backend Flow:
+
+```txt
+POST /api/tests/
+GET /api/tests/
+GET /api/tests/:id/
+```
+
+Response Includes:
+
+- Test title
+- Subject
+- Questions
+- Marks
+- Assigned class
+- Created teacher
+
+---
+
+### 4.2 Student Attempt System
+
+Students can view available tests and submit answers.
+
+Main Features:
+
+- View assigned tests
+- Attempt questions
+- Submit answers
+- Receive AI-generated feedback
+- View weak concepts and revision tasks
+
+Expected Endpoint:
+
+```txt
+POST /api/attempts/submit/
+```
+
+Submission Includes:
+
+- Test ID
+- Student answers
+- Question IDs
+- Student profile and interests
+
+---
+
+### 4.3 AI Agent Answer Analysis
+
+The AI Agent analyzes student answers and generates structured feedback.
+
+AI Agent Responsibilities:
+
+- Check answer correctness
+- Suggest score
+- Detect mistake type
+- Identify weak concept
+- Explain the mistake
+- Generate correct solution
+- Create revision task
+- Personalize explanation based on student interest
+
+Example AI Output:
+
+```json
+{
+  "is_correct": false,
+  "score": 2,
+  "mistake_type": "conceptual_error",
+  "weak_concept": "Photosynthesis",
+  "reason": "The student confused chlorophyll with stomata.",
+  "correct_solution": "Chlorophyll absorbs light energy required for photosynthesis.",
+  "revision_task": "Revise the role of chlorophyll and write two differences between chlorophyll and stomata."
+}
+```
+
+---
+
+### 4.4 Interest-Based Learning
+
+NexaLearn makes explanations more relatable by connecting academic concepts with student interests.
+
+Example Interests:
+
+- Anime
+- Cricket
+- Gaming
+- Movies
 - Real-life examples
 
-This makes difficult academic concepts easier to understand without replacing the teacher.
+Example:
+
+If a student likes anime, the AI can explain energy transfer like a power system.
+If a student likes cricket, the AI can explain strategy-based concepts through match situations.
+
+This makes learning more engaging without changing the academic meaning.
 
 ---
 
-## Tech Stack
+### 4.5 Gemini AI Chatbot
+
+The platform includes a Gemini-powered chatbot as a support feature.
+
+Behavior:
+
+- Appears as a small floating icon at the bottom-right
+- Opens into a compact professional chatbot popup
+- Helps students ask study-related questions
+- Sends requests through Django backend
+- Does not expose the Gemini API key in frontend
+
+Expected Endpoint:
+
+```txt
+POST /api/ai/chat/
+```
+
+Correct Flow:
+
+```txt
+React Frontend → Django Backend → Gemini API → Django Backend → React Frontend
+```
+
+---
+
+### 4.6 Teacher Reports
+
+Teachers can view class performance and learning gaps.
+
+Report Includes:
+
+- Average score
+- Weak topics
+- Mistake distribution
+- Student-wise performance
+- Remedial groups
+- Concepts needing revision
+
+Expected Endpoints:
+
+```txt
+GET /api/reports/teacher/overview/
+GET /api/reports/tests/:testId/
+```
+
+---
+
+## 5. Technology Stack
 
 ### Frontend
 
@@ -116,605 +256,100 @@ This makes difficult academic concepts easier to understand without replacing th
 - Python
 - Django
 - Django REST Framework
-- SimpleJWT Authentication
+- SimpleJWT
 - Django CORS Headers
-- SQLite for hackathon/development
-- PostgreSQL-ready architecture
-- Jazzmin Admin
+- SQLite for development
+- Gemini API
 
 ### AI
 
 - Custom Python AI Agent
 - Gemini API chatbot
-- Structured JSON response format
-- Backend-secured API integration
+- Prompt-based answer analysis
+- Structured JSON feedback
 
 ---
 
-## System Architecture
+## 6. Code Structure
 
-```text
-Student / Teacher
-       |
-       v
-React + Tailwind Frontend
-       |
-       v
-Django REST Framework API
-       |
-       |-----------------------------|
-       |                             |
-       v                             v
-Database                     Python AI Agent
-SQLite / PostgreSQL          Mistake Analysis
-                              Weak Concept Detection
-                              Revision Task Generation
-                              Interest-Based Explanation
-       |
-       v
-Gemini API Chatbot
-Study Assistant through Backend
-```
-
----
-
-## Core Workflow
-
-```text
-1. Teacher creates a class-wise diagnostic test
-2. Student attempts the test
-3. Student submits answers
-4. Django backend stores the attempt
-5. Python AI Agent analyzes each answer
-6. AI detects mistake type and weak concept
-7. Student receives revision card
-8. Teacher receives class report and remedial groups
-```
-
----
-
-## Recommended Folder Structure
-
-```text
-nexalearn/
-│
-├── backend/
-│   ├── manage.py
-│   ├── requirements.txt
-│   ├── .env.example
-│   ├── nexalearn_backend/
-│   │   ├── __init__.py
-│   │   ├── settings.py
-│   │   ├── urls.py
-│   │   ├── asgi.py
-│   │   └── wsgi.py
-│   │
-│   ├── accounts/
-│   │   ├── models.py
-│   │   ├── serializers.py
-│   │   ├── views.py
-│   │   ├── urls.py
-│   │   └── permissions.py
-│   │
-│   ├── personalization/
-│   │   ├── models.py
-│   │   ├── serializers.py
-│   │   ├── views.py
-│   │   └── urls.py
-│   │
-│   ├── tests_app/
-│   │   ├── models.py
-│   │   ├── serializers.py
-│   │   ├── views.py
-│   │   └── urls.py
-│   │
-│   ├── attempts/
-│   │   ├── models.py
-│   │   ├── serializers.py
-│   │   ├── views.py
-│   │   └── urls.py
-│   │
-│   ├── reports/
-│   │   ├── serializers.py
-│   │   ├── views.py
-│   │   └── urls.py
-│   │
-│   └── ai_agent/
-│       ├── agent.py
-│       ├── gemini_client.py
-│       ├── prompts.py
-│       ├── serializers.py
-│       ├── views.py
-│       └── urls.py
-│
-├── frontend/
-│   ├── index.html
-│   ├── package.json
-│   ├── vite.config.js
-│   ├── tailwind.config.js
-│   ├── postcss.config.js
-│   ├── .env.example
-│   └── src/
-│       ├── main.jsx
-│       ├── App.jsx
-│       ├── index.css
-│       ├── api/
-│       │   ├── axios.js
-│       │   ├── authApi.js
-│       │   ├── testApi.js
-│       │   ├── attemptApi.js
-│       │   └── aiApi.js
-│       │
-│       ├── components/
-│       │   ├── common/
-│       │   │   ├── Button.jsx
-│       │   │   ├── Input.jsx
-│       │   │   ├── Card.jsx
-│       │   │   ├── Badge.jsx
-│       │   │   └── Loader.jsx
-│       │   │
-│       │   ├── layout/
-│       │   │   ├── DashboardLayout.jsx
-│       │   │   ├── Navbar.jsx
-│       │   │   ├── Sidebar.jsx
-│       │   │   └── Footer.jsx
-│       │   │
-│       │   ├── ai/
-│       │   │   └── FloatingAIChatbot.jsx
-│       │   │
-│       │   ├── reports/
-│       │   │   ├── WeakTopicChart.jsx
-│       │   │   ├── MistakeDistributionChart.jsx
-│       │   │   └── RemedialGroupCard.jsx
-│       │   │
-│       │   └── tests/
-│       │       ├── QuestionCard.jsx
-│       │       ├── TestCard.jsx
-│       │       └── RevisionTaskCard.jsx
-│       │
-│       ├── pages/
-│       │   ├── public/
-│       │   │   ├── Home.jsx
-│       │   │   ├── Login.jsx
-│       │   │   └── Register.jsx
-│       │   │
-│       │   ├── teacher/
-│       │   │   ├── TeacherDashboard.jsx
-│       │   │   ├── CreateTest.jsx
-│       │   │   └── TestReport.jsx
-│       │   │
-│       │   └── student/
-│       │       ├── StudentDashboard.jsx
-│       │       ├── StudentProfile.jsx
-│       │       ├── StudentTests.jsx
-│       │       ├── AttemptTest.jsx
-│       │       ├── StudentReports.jsx
-│       │       └── StudentAI.jsx
-│       │
-│       ├── routes/
-│       │   ├── ProtectedRoute.jsx
-│       │   └── RoleBasedRoute.jsx
-│       │
-│       ├── context/
-│       │   └── AuthContext.jsx
-│       │
-│       └── utils/
-│           ├── constants.js
-│           └── helpers.js
-│
-├── .gitignore
-└── README.md
-```
-
----
-
-## Frontend Routes
-
-### Public Routes
-
-| Route       | Page         |
-| ----------- | ------------ |
-| `/`         | Landing page |
-| `/login`    | Login        |
-| `/register` | Register     |
-
-### Teacher Routes
-
-| Route                           | Page              |
-| ------------------------------- | ----------------- |
-| `/teacher`                      | Teacher dashboard |
-| `/teacher/tests/create`         | Create test       |
-| `/teacher/tests/:testId/report` | Test report       |
-
-### Student Routes
-
-| Route                    | Page                          |
-| ------------------------ | ----------------------------- |
-| `/student`               | Student dashboard             |
-| `/student/profile`       | Student profile and interests |
-| `/student/tests`         | Available tests               |
-| `/student/tests/:testId` | Attempt test                  |
-| `/student/reports`       | Student learning reports      |
-| `/student/ai`            | AI study assistant            |
-
----
-
-## Backend Apps
-
-### `accounts`
-
-Handles authentication, user roles, JWT login/register, teacher/student separation.
-
-### `personalization`
-
-Stores student interests, learning preferences, class level, and personalization data.
-
-### `tests_app`
-
-Handles test creation, questions, marks, subjects, topics, and class-wise test assignment.
-
-### `attempts`
-
-Handles student submissions, answer storage, AI analysis results, and attempt scores.
-
-### `reports`
-
-Generates teacher dashboards, weak-topic reports, mistake distribution, and remedial groups.
-
-### `ai_agent`
-
-Contains the Python AI Agent, Gemini integration, prompts, structured answer analysis, and chatbot endpoint.
-
----
-
-## AI Agent JSON Output Format
-
-The AI Agent should return structured JSON like this:
-
-```json
-{
-  "is_correct": false,
-  "score": 2,
-  "max_score": 5,
-  "mistake_type": "conceptual_error",
-  "weak_concept": "Photosynthesis light reaction",
-  "reason": "The student confused the role of chlorophyll with the role of stomata.",
-  "correct_solution": "Chlorophyll absorbs light energy, while stomata help in gas exchange.",
-  "personalized_explanation": "Think of chlorophyll like the power source in an anime character. It captures energy first, then the plant uses that energy to make food.",
-  "revision_task": "Revise the difference between chlorophyll, chloroplast, and stomata. Then answer two short questions about light reaction."
-}
-```
-
----
-
-## Mistake Types
-
-Recommended mistake categories:
-
-```text
-conceptual_error
-calculation_error
-careless_error
-incomplete_answer
-misread_question
-weak_explanation
-grammar_or_language_issue
-correct
-```
-
----
-
-## Backend Setup
-
-### 1. Clone the Repository
-
-```bash
-git clone https://github.com/your-username/nexalearn.git
-cd nexalearn/backend
-```
-
-### 2. Create Virtual Environment
-
-```bash
-python -m venv venv
-```
-
-### 3. Activate Virtual Environment
-
-#### Windows
-
-```bash
-venv\Scripts\activate
-```
-
-#### macOS / Linux
-
-```bash
-source venv/bin/activate
-```
-
-### 4. Install Dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-Recommended `requirements.txt`:
+Current frontend structure:
 
 ```txt
-Django
-djangorestframework
-djangorestframework-simplejwt
-django-cors-headers
-python-dotenv
-google-generativeai
-django-jazzmin
+Frontend/
+├── node_modules/
+├── src/
+│   ├── assets/
+│   ├── components/
+│   ├── context/
+│   ├── layouts/
+│   ├── pages/
+│   ├── routes/
+│   ├── services/
+│   ├── App.jsx
+│   ├── index.css
+│   └── main.jsx
+│
+├── .gitignore
+├── eslint.config.js
+├── index.html
+├── package-lock.json
+├── package.json
+└── tailwind.config.js
 ```
 
-### 5. Create `.env`
+Recommended backend structure:
 
-Create a `.env` file inside the `backend/` directory.
-
-```env
-SECRET_KEY=your-django-secret-key
-DEBUG=True
-ALLOWED_HOSTS=localhost,127.0.0.1
-
-GEMINI_API_KEY=your-gemini-api-key
-
-CORS_ALLOWED_ORIGINS=http://localhost:5173
+```txt
+Backend/
+├── manage.py
+├── requirements.txt
+├── .env.example
+├── nexalearn_backend/
+├── accounts/
+├── personalization/
+├── tests_app/
+├── attempts/
+├── reports/
+└── ai_agent/
 ```
 
-Do not push `.env` to GitHub.
-
-### 6. Run Migrations
-
-```bash
-python manage.py makemigrations
-python manage.py migrate
-```
-
-### 7. Create Superuser
-
-```bash
-python manage.py createsuperuser
-```
-
-### 8. Start Backend Server
-
-```bash
-python manage.py runserver
-```
-
-Backend runs at:
-
-```text
-http://127.0.0.1:8000/
-```
+The project follows separation of concerns and modular architecture for scalability.
 
 ---
 
-## Frontend Setup
+## 7. Local Development Setup
 
-### 1. Go to Frontend Directory
+### Prerequisites
+
+- Node.js 18+
+- npm
+- Python 3.10+
+- pip
+- Virtual environment
+
+---
+
+### Frontend Installation
 
 ```bash
-cd ../frontend
-```
-
-### 2. Install Dependencies
-
-```bash
+cd Frontend
 npm install
-```
-
-Recommended packages:
-
-```bash
-npm install axios react-router-dom lucide-react recharts
-```
-
-### 3. Create `.env`
-
-Create a `.env` file inside the `frontend/` directory.
-
-```env
-VITE_API_BASE_URL=http://127.0.0.1:8000/api
-```
-
-Do not push `.env` to GitHub.
-
-### 4. Start Frontend Server
-
-```bash
 npm run dev
 ```
 
-Frontend runs at:
+Runs on:
 
-```text
-http://localhost:5173/
+```txt
+http://localhost:5173
 ```
 
----
+Frontend environment file:
 
-## Important API Endpoints
-
-### Auth
-
-```text
-POST /api/accounts/register/
-POST /api/accounts/login/
-POST /api/token/
-POST /api/token/refresh/
+```txt
+Frontend/.env
 ```
 
-### Tests
-
-```text
-GET    /api/tests/
-POST   /api/tests/
-GET    /api/tests/:id/
-PUT    /api/tests/:id/
-DELETE /api/tests/:id/
-```
-
-### Attempts
-
-```text
-POST /api/attempts/submit/
-GET  /api/attempts/my-results/
-GET  /api/attempts/:id/
-```
-
-### Reports
-
-```text
-GET /api/reports/teacher/overview/
-GET /api/reports/tests/:testId/
-GET /api/reports/remedial-groups/:testId/
-```
-
-### AI Agent
-
-```text
-POST /api/ai/analyze-answer/
-POST /api/ai/chat/
-```
-
----
-
-## Gemini API Integration Rule
-
-The Gemini API key must only be used in the Django backend.
-
-Correct flow:
-
-```text
-React UI -> Django API -> Gemini API -> Django API -> React UI
-```
-
-Do not call Gemini directly from React because that exposes the API key in the browser.
-
----
-
-## Example AI Analyze Request
-
-```json
-{
-  "subject": "Biology",
-  "topic": "Photosynthesis",
-  "class_level": "Class 10",
-  "question": "What is the role of chlorophyll in photosynthesis?",
-  "correct_answer": "Chlorophyll absorbs light energy required for photosynthesis.",
-  "student_answer": "Chlorophyll helps the plant breathe through stomata.",
-  "marks": 5,
-  "student_interests": ["anime", "cricket", "gaming"]
-}
-```
-
----
-
-## Example AI Analyze Response
-
-```json
-{
-  "is_correct": false,
-  "score": 2,
-  "mistake_type": "conceptual_error",
-  "weak_concept": "Function of chlorophyll",
-  "reason": "The answer confuses chlorophyll with stomata.",
-  "correct_solution": "Chlorophyll absorbs sunlight, while stomata help in gas exchange.",
-  "personalized_explanation": "In anime terms, chlorophyll is like the energy absorber. It collects the power source first so the plant can produce food.",
-  "revision_task": "Write the difference between chlorophyll and stomata in three points."
-}
-```
-
----
-
-## Landing Page Structure
-
-The homepage should follow this professional SaaS-style flow:
-
-```text
-Hero
-Problem
-Solution
-Workflow
-Features
-Personalization
-Class-wise Learning Recovery
-AI Agent Section
-Teacher Dashboard Preview
-Student Recovery Preview
-CTA
-Footer
-```
-
-Recommended UI direction:
-
-- Blue / indigo / slate color system
-- Responsive layout
-- Clear typography
-- Modern cards
-- Soft shadows
-- Accessible buttons
-- Proper spacing
-- Professional dashboard feel
-- Floating AI chatbot only on student dashboard pages
-
----
-
-## Demo Flow for Hackathon
-
-Use this flow while presenting to judges:
-
-```text
-1. Open NexaLearn landing page
-2. Explain the problem: students struggle because content does not connect with them
-3. Login as teacher
-4. Create a diagnostic test
-5. Login as student
-6. Attempt the test and submit answers
-7. Show AI answer analysis
-8. Show student revision card
-9. Show personalized explanation based on interests
-10. Go back to teacher dashboard
-11. Show weak-topic analytics
-12. Show remedial groups
-13. Open compact Gemini chatbot as supporting feature
-14. End with human-centered AI message
-```
-
----
-
-## Hackathon Pitch
-
-Students do not fail only because they do not study. Many fail because they never understand exactly where their learning gap is.
-
-NexaLearn helps teachers detect those gaps quickly. Teachers create simple diagnostic tests, students submit answers, and our AI Agent identifies weak concepts, mistake types, and personalized revision tasks.
-
-The platform also explains concepts using contexts students already care about, like anime, cricket, gaming, and movies. This keeps learning engaging while keeping teachers in control.
-
-NexaLearn is not a replacement for teachers. It is a learning recovery assistant that helps teachers personalize support at scale.
-
----
-
-## Environment Variables
-
-### Backend `.env.example`
-
-```env
-SECRET_KEY=replace-with-your-secret-key
-DEBUG=True
-ALLOWED_HOSTS=localhost,127.0.0.1
-
-GEMINI_API_KEY=replace-with-your-gemini-api-key
-
-CORS_ALLOWED_ORIGINS=http://localhost:5173
-```
-
-### Frontend `.env.example`
+Add:
 
 ```env
 VITE_API_BASE_URL=http://127.0.0.1:8000/api
@@ -722,103 +357,143 @@ VITE_API_BASE_URL=http://127.0.0.1:8000/api
 
 ---
 
-## Git Ignore Recommendation
+### Backend Installation
 
-Create a `.gitignore` file in the root directory:
-
-```gitignore
-# Python
-__pycache__/
-*.py[cod]
-*.pyo
-*.pyd
-.Python
-venv/
-env/
-.env
-*.sqlite3
-db.sqlite3
-
-# Django
-media/
-staticfiles/
-*.log
-
-# Node / React
-node_modules/
-dist/
-build/
-.vite/
-
-# Environment files
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
-# IDE / Editor
-.vscode/
-.idea/
-*.swp
-
-# OS
-.DS_Store
-Thumbs.db
+```bash
+cd Backend
+python -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt
+python manage.py makemigrations
+python manage.py migrate
+python manage.py runserver
 ```
 
-Keep `.env.example` files in GitHub. Never push real `.env` files.
+Runs on:
+
+```txt
+http://127.0.0.1:8000
+```
+
+Backend environment file:
+
+```txt
+Backend/.env
+```
+
+Add:
+
+```env
+SECRET_KEY=your_secret_key
+DEBUG=True
+ALLOWED_HOSTS=localhost,127.0.0.1
+GEMINI_API_KEY=your_gemini_api_key
+CORS_ALLOWED_ORIGINS=http://localhost:5173
+```
 
 ---
 
-## Production Notes
+## 8. Functional Test Example
 
-For production deployment:
+Input:
 
-- Use PostgreSQL instead of SQLite
-- Set `DEBUG=False`
-- Use strong `SECRET_KEY`
-- Configure secure CORS origins
-- Store environment variables securely
-- Use HTTPS
-- Add rate limiting to AI endpoints
-- Add role-based permissions
-- Add database indexing for reports
-- Use `select_related()` and `prefetch_related()` for optimized queries
-- Add proper logging and monitoring
+```txt
+Question: What is the role of chlorophyll in photosynthesis?
+Correct Answer: Chlorophyll absorbs light energy required for photosynthesis.
+Student Answer: Chlorophyll helps the plant breathe through stomata.
+```
+
+Output:
+
+```txt
+Mistake Type: Conceptual Error
+Weak Concept: Function of chlorophyll
+Feedback: The student confused chlorophyll with stomata.
+Revision Task: Revise chlorophyll, chloroplast, and stomata with two differences.
+```
+
+Additional tests:
+
+- Teacher test creation
+- Student answer submission
+- AI feedback generation
+- Student report page
+- Teacher weak-topic dashboard
+- Gemini chatbot query
 
 ---
 
-## Future Improvements
+## 9. Problem Impact & Vision
 
-- PDF report export for teachers
-- Parent progress dashboard
-- Weekly learning recovery plan
+Target Users:
+
+- Students
+- Teachers
+- Schools
+- Coaching institutes
+- Exam preparation platforms
+
+Impact Goal:
+
+Enable teachers to identify:
+
+- Who is weak
+- Where they are weak
+- Why they are weak
+- What they should revise next
+
+Enable students to receive:
+
+- Clear feedback
+- Personalized explanation
+- Revision task
+- Better learning direction
+
+NexaLearn aims to make learning recovery faster, more personal, and more actionable.
+
+---
+
+## 10. Future Roadmap
+
+- PDF report export
+- Parent dashboard
 - Adaptive quiz generation
-- Voice-based explanation mode
+- Multi-language explanation
+- Voice-based learning assistant
 - Gamified revision streaks
-- Class ranking by improvement, not just marks
-- Multi-language explanation support
-- NEB / SAT / IELTS mode support
-- Advanced analytics with PostgreSQL
+- NEB, SAT, IELTS, and PTE practice modes
+- PostgreSQL production database
+- Advanced analytics dashboard
+- Mobile application version
 
 ---
 
-## License
+## 11. Author
 
-This project is built for educational and hackathon purposes.
-You can customize the license based on your team requirements.
+NexaLearn Team
+
+Role:
+
+- Frontend Development
+- UI/UX Design
+- Backend Planning
+- AI Agent Workflow Design
+
+GitHub:
+
+```Asim Pun Magar
+https://github.com/cyberchimpdev
+```
 
 ---
 
-## Team
+## 12. License
 
-Built by the NexaLearn team for an education-focused hackathon.
+This project is open-source and available for educational and hackathon use.
 
 ---
 
 ## Final Message
 
-NexaLearn makes learning recovery faster, more personal, and more actionable.
-
-It helps students understand their mistakes, helps teachers save time, and turns AI into a support system for better education.
+NexaLearn is not just an AI chatbot.
+It is a learning recovery platform that helps teachers understand student weaknesses and helps students improve through personalized, AI-guided revision.
