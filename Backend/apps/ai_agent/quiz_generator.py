@@ -1,213 +1,220 @@
 from __future__ import annotations
 
-import json
-import os
+import random
 from typing import Any
 
+from apps.ai_agent.gemini_client import gemini_client
+from apps.ai_agent.prompts import quiz_generation_prompt
 
-class QuizGenerationService:
+
+class AIPracticeQuizGenerator:
     def generate_quiz(
         self,
         *,
         subject: str,
         topic: str,
-        class_level: str,
-        difficulty: str,
-        question_count: int,
-        marks_per_question: int,
+        student_class: str = "12",
+        difficulty: str = "medium",
+        total_questions: int = 5,
+        marks_per_question: int = 2,
+        interests: list[str] | None = None,
     ) -> dict[str, Any]:
-        try:
-            return self._generate_with_gemini(
+        total_questions = max(1, min(int(total_questions or 5), 20))
+        marks_per_question = max(1, min(int(marks_per_question or 2), 10))
+        safe_interests = interests or []
+
+        questions = self._generate_with_gemini(
+            subject=subject,
+            topic=topic,
+            student_class=student_class,
+            difficulty=difficulty,
+            total_questions=total_questions,
+            marks_per_question=marks_per_question,
+            interests=safe_interests,
+        )
+
+        provider = "gemini"
+        gemini_error = ""
+
+        if not questions:
+            provider = "local"
+            gemini_error = gemini_client.last_error or "Gemini failed. Local fallback used."
+            questions = self._fallback_questions(
                 subject=subject,
                 topic=topic,
-                class_level=class_level,
+                student_class=student_class,
                 difficulty=difficulty,
-                question_count=question_count,
+                total_questions=total_questions,
                 marks_per_question=marks_per_question,
             )
-        except Exception:
-            return self._generate_locally(
-                subject=subject,
-                topic=topic,
-                class_level=class_level,
-                difficulty=difficulty,
-                question_count=question_count,
-                marks_per_question=marks_per_question,
-            )
+
+        return {
+            "provider": provider,
+            "source": provider,
+            "gemini_error": gemini_error,
+            "gemini_model": gemini_client.last_model,
+            "tried_models": gemini_client.last_tried_models,
+            "title": f"{subject} {topic} Practice Test",
+            "description": "Answer the questions and submit to get AI-powered feedback.",
+            "subject": subject,
+            "topic": topic,
+            "class_level": student_class,
+            "student_class": student_class,
+            "difficulty": difficulty,
+            "total_questions": len(questions),
+            "marks_per_question": marks_per_question,
+            "total_marks": len(questions) * marks_per_question,
+            "questions": questions,
+        }
 
     def _generate_with_gemini(
         self,
         *,
         subject: str,
         topic: str,
-        class_level: str,
+        student_class: str,
         difficulty: str,
-        question_count: int,
+        total_questions: int,
         marks_per_question: int,
-    ) -> dict[str, Any]:
-        api_key = os.getenv("GEMINI_API_KEY")
-        model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
-
-        if not api_key:
-            raise ValueError("GEMINI_API_KEY missing.")
-
-        from google import genai
-
-        client = genai.Client(api_key=api_key)
-
-        prompt = f"""
-Generate a diagnostic quiz for NexaLearn.
-
-Return ONLY valid JSON. No markdown. No explanation outside JSON.
-
-Context:
-Subject: {subject}
-Topic: {topic}
-Class level: {class_level}
-Difficulty: {difficulty}
-Question count: {question_count}
-Marks per question: {marks_per_question}
-
-JSON format:
-{{
-  "title": "Class {class_level} {topic} Diagnostic Test",
-  "subject": "{subject}",
-  "topic": "{topic}",
-  "class_level": "{class_level}",
-  "difficulty": "{difficulty}",
-  "description": "Short diagnostic test to detect weak concepts.",
-  "is_published": false,
-  "questions": [
-    {{
-      "question_text": "Question text",
-      "correct_answer": "Correct answer",
-      "marks": {marks_per_question},
-      "difficulty": "{difficulty}",
-      "order": 1
-    }}
-  ]
-}}
-
-Rules:
-- Questions must detect conceptual, formula, calculation, or unit mistakes.
-- Correct answers must be short but clear.
-- Use class-appropriate language.
-- Do not create multiple-choice questions unless required.
-"""
-
-        response = client.models.generate_content(
-            model=model,
-            contents=prompt,
-        )
-
-        text = getattr(response, "text", "")
-        cleaned = text.strip().replace("```json", "").replace("```", "").strip()
-        data = json.loads(cleaned)
-
-        return self._normalize_quiz(
-            data=data,
+        interests: list[str],
+    ) -> list[dict[str, Any]] | None:
+        prompt = quiz_generation_prompt(
             subject=subject,
             topic=topic,
-            class_level=class_level,
+            student_class=student_class,
             difficulty=difficulty,
-            question_count=question_count,
+            total_questions=total_questions,
             marks_per_question=marks_per_question,
+            interests=interests,
         )
 
-    def _generate_locally(
-        self,
-        *,
-        subject: str,
-        topic: str,
-        class_level: str,
-        difficulty: str,
-        question_count: int,
-        marks_per_question: int,
-    ) -> dict[str, Any]:
-        templates = [
-            f"Define {topic}.",
-            f"State the main formula or rule related to {topic}.",
-            f"Explain one common mistake students make in {topic}.",
-            f"Solve one short problem based on {topic}.",
-            f"Write one real-life example of {topic}.",
-        ]
+        data = gemini_client.generate_json_list(prompt)
 
-        questions = []
+        if not data:
+            return None
 
-        for index in range(question_count):
-            question_text = templates[index % len(templates)]
+        questions: list[dict[str, Any]] = []
+
+        for index, item in enumerate(data[:total_questions], start=1):
+            question_text = str(item.get("question", "")).strip()
+            options = item.get("options", [])
+            correct_answer = str(item.get("correct_answer", "")).strip()
+
+            if not question_text or not isinstance(options, list):
+                continue
+
+            options = [str(option).strip() for option in options if str(option).strip()]
+            options = options[:4]
+
+            if len(options) < 2:
+                continue
+
+            if correct_answer not in options:
+                correct_answer = options[0]
 
             questions.append(
                 {
+                    "id": index,
+                    "order": index,
+                    "question": question_text,
                     "question_text": question_text,
-                    "correct_answer": self._local_answer(topic, question_text),
-                    "marks": marks_per_question,
+                    "text": question_text,
+                    "options": options,
+                    "correct_answer": correct_answer,
+                    "explanation": str(item.get("explanation", "")).strip()
+                    or f"The correct answer is {correct_answer}.",
+                    "weak_concept": str(item.get("weak_concept", topic)).strip() or topic,
+                    "hint": str(item.get("hint", "")).strip(),
+                    "difficulty_reason": str(item.get("difficulty_reason", "")).strip(),
+                    "subject": subject,
+                    "topic": topic,
+                    "class_level": student_class,
+                    "student_class": student_class,
                     "difficulty": difficulty,
-                    "order": index + 1,
+                    "marks": marks_per_question,
                 }
             )
 
-        return {
-            "title": f"Class {class_level} {topic} Diagnostic Test",
-            "subject": subject,
-            "topic": topic,
-            "class_level": class_level,
-            "difficulty": difficulty,
-            "description": "AI-generated diagnostic test to detect weak concepts.",
-            "is_published": False,
-            "questions": questions,
-        }
+        return questions or None
 
-    def _local_answer(self, topic: str, question: str) -> str:
-        lowered = question.lower()
-
-        if "define" in lowered:
-            return f"{topic} is a key concept in this subject. Explain its meaning clearly."
-
-        if "formula" in lowered or "rule" in lowered:
-            return f"Write the correct formula/rule for {topic} and explain each term."
-
-        if "mistake" in lowered:
-            return f"A common mistake in {topic} is using the wrong concept, formula, or unit."
-
-        if "real-life" in lowered:
-            return f"Give a relevant daily-life example connected to {topic}."
-
-        return f"Solve using the correct concept of {topic}."
-
-    def _normalize_quiz(
+    def _fallback_questions(
         self,
         *,
-        data: dict[str, Any],
         subject: str,
         topic: str,
-        class_level: str,
+        student_class: str,
         difficulty: str,
-        question_count: int,
+        total_questions: int,
         marks_per_question: int,
-    ) -> dict[str, Any]:
-        questions = data.get("questions", [])
+    ) -> list[dict[str, Any]]:
+        templates = [
+            {
+                "question": f"What is the main concept of {topic} in {subject}?",
+                "options": [
+                    f"Understanding the concept of {topic}",
+                    "Ignoring examples",
+                    "Only memorizing random words",
+                    "Skipping practice",
+                ],
+                "correct_answer": f"Understanding the concept of {topic}",
+                "explanation": f"{topic} becomes easier when the core concept is clear.",
+                "weak_concept": topic,
+            },
+            {
+                "question": f"Which method is best for learning {topic}?",
+                "options": [
+                    "Understand, practice, and review mistakes",
+                    "Only copy answers",
+                    "Avoid solving questions",
+                    "Guess without reading",
+                ],
+                "correct_answer": "Understand, practice, and review mistakes",
+                "explanation": "The best learning cycle is concept understanding, practice, and mistake review.",
+                "weak_concept": "Learning strategy",
+            },
+            {
+                "question": f"Why should students review mistakes in {topic}?",
+                "options": [
+                    "To identify weak concepts",
+                    "To waste time",
+                    "To avoid study",
+                    "To memorize random options",
+                ],
+                "correct_answer": "To identify weak concepts",
+                "explanation": "Mistakes show which concept needs revision.",
+                "weak_concept": "Weak concept detection",
+            },
+        ]
 
-        normalized_questions = []
-        for index, question in enumerate(questions[:question_count]):
-            normalized_questions.append(
+        questions: list[dict[str, Any]] = []
+
+        for index in range(1, total_questions + 1):
+            item = random.choice(templates)
+            question_text = f"{item['question']} #{index}"
+
+            questions.append(
                 {
-                    "question_text": str(question.get("question_text", "")).strip(),
-                    "correct_answer": str(question.get("correct_answer", "")).strip(),
-                    "marks": int(question.get("marks", marks_per_question)),
-                    "difficulty": str(question.get("difficulty", difficulty)),
-                    "order": index + 1,
+                    "id": index,
+                    "order": index,
+                    "question": question_text,
+                    "question_text": question_text,
+                    "text": question_text,
+                    "options": item["options"],
+                    "correct_answer": item["correct_answer"],
+                    "explanation": item["explanation"],
+                    "weak_concept": item["weak_concept"],
+                    "hint": f"Focus on the main idea of {topic}.",
+                    "difficulty_reason": f"This is a {difficulty} level fallback question.",
+                    "subject": subject,
+                    "topic": topic,
+                    "class_level": student_class,
+                    "student_class": student_class,
+                    "difficulty": difficulty,
+                    "marks": marks_per_question,
                 }
             )
 
-        return {
-            "title": data.get("title") or f"Class {class_level} {topic} Diagnostic Test",
-            "subject": data.get("subject") or subject,
-            "topic": data.get("topic") or topic,
-            "class_level": data.get("class_level") or class_level,
-            "difficulty": data.get("difficulty") or difficulty,
-            "description": data.get("description")
-            or "AI-generated diagnostic test to detect weak concepts.",
-            "is_published": bool(data.get("is_published", False)),
-            "questions": normalized_questions,
-        }
+        return questions
+
+
+ai_practice_quiz_generator = AIPracticeQuizGenerator()

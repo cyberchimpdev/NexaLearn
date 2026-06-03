@@ -1,48 +1,54 @@
 from __future__ import annotations
 
-from dataclasses import asdict
+from typing import Any
 
 from django.db import transaction
+from django.db.models import Prefetch
 from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.accounts.models import User
 from apps.ai_agent.schemas import AnswerAnalysisInput
-from apps.ai_agent.services import AIAnalysisService
-from apps.personalization.models import StudentProfile, StudentStreak
+from apps.ai_agent.services import local_learning_agent
 from apps.tests_app.models import Question, Test
 
-from .models import AnswerAttempt, Attempt
-from .serializers import AttemptDetailSerializer, SubmitAttemptSerializer
+from .models import Attempt, AttemptAnswer, Mistake
+from .serializers import AttemptDetailSerializer, AttemptListSerializer
 
 
 class SubmitAttemptView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     @transaction.atomic
-    def post(self, request):
-        if request.user.role != User.Role.STUDENT:
+    def post(self, request, *args: Any, **kwargs: Any) -> Response:
+        user = request.user
+
+        test_id = request.data.get("test_id")
+        answers = request.data.get("answers", [])
+
+        if not test_id:
             return Response(
-                {"detail": "Only students can submit attempts."},
-                status=status.HTTP_403_FORBIDDEN,
+                {"detail": "test_id is required."},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
-        serializer = SubmitAttemptSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        test_id = serializer.validated_data["test_id"]
-        submitted_answers = serializer.validated_data["answers"]
+        if not isinstance(answers, list):
+            return Response(
+                {"detail": "answers must be a list."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         try:
-            test = Test.objects.prefetch_related("questions").get(id=test_id, is_published=True)
+            test = (
+                Test.objects.select_related("created_by")
+                .prefetch_related("questions")
+                .get(id=test_id)
+            )
         except Test.DoesNotExist:
             return Response(
-                {"detail": "Test not found or not published."},
+                {"detail": "Test not found."},
                 status=status.HTTP_404_NOT_FOUND,
             )
-
-        profile, _ = StudentProfile.objects.get_or_create(student=request.user)
 
         question_map = {
             question.id: question
@@ -50,96 +56,179 @@ class SubmitAttemptView(APIView):
         }
 
         attempt = Attempt.objects.create(
-            student=request.user,
             test=test,
-            total_score=0,
-            total_marks=sum(question.marks for question in question_map.values()),
+            student=user,
+            total_marks=0,
+            obtained_marks=0,
         )
 
-        ai_service = AIAnalysisService()
-        total_score = 0
+        total_marks = 0.0
+        obtained_marks = 0.0
+        analysis_payloads: list[dict[str, Any]] = []
 
-        for submitted in submitted_answers:
-            question_id = submitted["question_id"]
-            student_answer = submitted.get("student_answer", "")
+        for answer_item in answers:
+            question_id = answer_item.get("question_id")
+            student_answer = str(answer_item.get("answer", "")).strip()
 
-            question = question_map.get(question_id)
-
-            if not question:
+            if not question_id:
                 continue
 
-            ai_payload = AnswerAnalysisInput(
-                class_level=test.class_level,
-                subject=test.subject,
-                topic=test.topic,
-                question=question.question_text,
-                correct_answer=question.correct_answer,
+            try:
+                question_id_int = int(question_id)
+            except (TypeError, ValueError):
+                continue
+
+            question = question_map.get(question_id_int)
+
+            if question is None:
+                continue
+
+            question_marks = float(getattr(question, "marks", 1) or 1)
+            total_marks += question_marks
+
+            correct_answer = str(getattr(question, "correct_answer", "") or "").strip()
+
+            analysis_input = AnswerAnalysisInput(
+                question_text=str(getattr(question, "text", "") or ""),
+                correct_answer=correct_answer,
                 student_answer=student_answer,
-                marks=question.marks,
-                student_interest=profile.primary_interest,
-                explanation_style=profile.explanation_style,
+                subject=str(getattr(test, "subject", "General") or "General"),
+                topic=str(getattr(question, "topic", "") or getattr(test, "topic", "General") or "General"),
+                difficulty=str(getattr(question, "difficulty", "medium") or "medium"),
+                question_type=str(getattr(question, "question_type", "short_answer") or "short_answer"),
+                marks=int(question_marks),
+                student_class=str(getattr(test, "student_class", "") or ""),
+                learning_style=getattr(user, "learning_style", None),
+                interests=self._get_user_interests(user),
             )
 
-            ai_result = ai_service.analyze_answer(ai_payload)
-            result_dict = asdict(ai_result)
+            analysis_result = local_learning_agent.analyze_answer(analysis_input)
 
-            total_score += float(result_dict["score"])
+            obtained_marks += float(analysis_result.score_awarded)
 
-            AnswerAttempt.objects.create(
+            attempt_answer = AttemptAnswer.objects.create(
                 attempt=attempt,
                 question=question,
                 student_answer=student_answer,
-                is_correct=result_dict["is_correct"],
-                score=result_dict["score"],
-                mistake_type=result_dict["mistake_type"],
-                weak_concept=result_dict["weak_concept"],
-                ai_reason=result_dict["reason"],
-                correct_solution=result_dict["correct_solution"],
-                interest_based_explanation=result_dict["interest_based_explanation"],
-                revision_task=result_dict["revision_task"],
+                is_correct=analysis_result.is_correct,
+                marks_awarded=analysis_result.score_awarded,
             )
 
-        attempt.total_score = total_score
-        attempt.save(update_fields=["total_score"])
+            if not analysis_result.is_correct:
+                Mistake.objects.create(
+                    attempt=attempt,
+                    attempt_answer=attempt_answer,
+                    question=question,
+                    weak_concept=analysis_result.weak_concept,
+                    mistake_type=analysis_result.mistake_type,
+                    explanation=analysis_result.explanation,
+                    personalized_explanation=analysis_result.personalized_explanation,
+                    revision_task=analysis_result.revision_task,
+                )
 
-        streak, _ = StudentStreak.objects.get_or_create(student=request.user)
-        streak.mark_activity()
-
-        detail_serializer = AttemptDetailSerializer(attempt)
-
-        return Response(detail_serializer.data, status=status.HTTP_201_CREATED)
-
-
-class StudentAttemptsView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get(self, request):
-        if request.user.role != User.Role.STUDENT:
-            return Response(
-                {"detail": "Only students can view attempts."},
-                status=status.HTTP_403_FORBIDDEN,
+            analysis_payloads.append(
+                {
+                    "question_id": question.id,
+                    "question": analysis_input.question_text,
+                    "student_answer": student_answer,
+                    "correct_answer": correct_answer,
+                    **analysis_result.to_dict(),
+                }
             )
 
-        attempts = (
-            Attempt.objects.filter(student=request.user)
-            .select_related("test")
-            .prefetch_related("answers", "answers__question")
-            .order_by("-submitted_at")
+        attempt.total_marks = total_marks
+        attempt.obtained_marks = obtained_marks
+        attempt.percentage = self._calculate_percentage(obtained_marks, total_marks)
+        attempt.save(update_fields=["total_marks", "obtained_marks", "percentage"])
+
+        return Response(
+            {
+                "detail": "Attempt submitted successfully.",
+                "attempt_id": attempt.id,
+                "test_id": test.id,
+                "total_marks": attempt.total_marks,
+                "obtained_marks": attempt.obtained_marks,
+                "percentage": attempt.percentage,
+                "analysis": analysis_payloads,
+            },
+            status=status.HTTP_201_CREATED,
         )
 
-        serializer = AttemptDetailSerializer(attempts, many=True)
+    def _calculate_percentage(self, obtained_marks: float, total_marks: float) -> float:
+        if total_marks <= 0:
+            return 0.0
+
+        return round((obtained_marks / total_marks) * 100, 2)
+
+    def _get_user_interests(self, user) -> list[str]:
+        """
+        Safe profile-interest resolver.
+        Works even if the personalization/profile model does not exist.
+        """
+
+        possible_attrs = ["interests", "hobbies", "favorite_contexts"]
+
+        for attr in possible_attrs:
+            value = getattr(user, attr, None)
+
+            if isinstance(value, list):
+                return value
+
+            if isinstance(value, str) and value.strip():
+                return [
+                    item.strip()
+                    for item in value.split(",")
+                    if item.strip()
+                ]
+
+        profile = getattr(user, "profile", None)
+
+        if profile:
+            for attr in possible_attrs:
+                value = getattr(profile, attr, None)
+
+                if isinstance(value, list):
+                    return value
+
+                if isinstance(value, str) and value.strip():
+                    return [
+                        item.strip()
+                        for item in value.split(",")
+                        if item.strip()
+                    ]
+
+        return []
+
+
+class AttemptListView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, *args: Any, **kwargs: Any) -> Response:
+        attempts = (
+            Attempt.objects.select_related("test", "student")
+            .filter(student=request.user)
+            .order_by("-created_at")
+        )
+
+        serializer = AttemptListSerializer(attempts, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class AttemptDetailView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
-    def get(self, request, pk):
+    def get(self, request, attempt_id: int, *args: Any, **kwargs: Any) -> Response:
         try:
             attempt = (
                 Attempt.objects.select_related("test", "student")
-                .prefetch_related("answers", "answers__question")
-                .get(pk=pk)
+                .prefetch_related(
+                    Prefetch(
+                        "answers",
+                        queryset=AttemptAnswer.objects.select_related("question"),
+                    ),
+                    "mistakes",
+                )
+                .get(id=attempt_id, student=request.user)
             )
         except Attempt.DoesNotExist:
             return Response(
@@ -147,11 +236,42 @@ class AttemptDetailView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        if request.user.role == User.Role.STUDENT and attempt.student_id != request.user.id:
-            return Response(
-                {"detail": "You cannot view this attempt."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-
         serializer = AttemptDetailSerializer(attempt)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class AttemptMistakesView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, attempt_id: int, *args: Any, **kwargs: Any) -> Response:
+        try:
+            attempt = Attempt.objects.get(id=attempt_id, student=request.user)
+        except Attempt.DoesNotExist:
+            return Response(
+                {"detail": "Attempt not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        mistakes = (
+            Mistake.objects.select_related("question", "attempt_answer")
+            .filter(attempt=attempt)
+            .order_by("id")
+        )
+
+        data = [
+            {
+                "id": mistake.id,
+                "question_id": mistake.question_id,
+                "question": getattr(mistake.question, "text", ""),
+                "student_answer": getattr(mistake.attempt_answer, "student_answer", ""),
+                "correct_answer": getattr(mistake.question, "correct_answer", ""),
+                "weak_concept": mistake.weak_concept,
+                "mistake_type": mistake.mistake_type,
+                "explanation": mistake.explanation,
+                "personalized_explanation": mistake.personalized_explanation,
+                "revision_task": mistake.revision_task,
+            }
+            for mistake in mistakes
+        ]
+
+        return Response(data, status=status.HTTP_200_OK)

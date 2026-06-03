@@ -1,20 +1,21 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  AlertTriangle,
   ArrowRight,
-  Brain,
-  BrainCircuit,
+  BarChart3,
+  BookOpenCheck,
   CheckCircle2,
   ChevronRight,
-  ClipboardCheck,
-  Gamepad2,
+  ClipboardList,
   GraduationCap,
   Layers3,
+  Lightbulb,
   LineChart,
   Menu,
-  Sparkles,
-  Trophy,
+  MessageSquareText,
+  School,
+  ShieldCheck,
+  Target,
   UsersRound,
   X,
 } from "lucide-react";
@@ -22,81 +23,103 @@ import { useAuth } from "../context/AuthContext";
 
 const navLinks = [
   { label: "Problem", href: "#problem" },
-  { label: "How it works", href: "#how-it-works" },
-  { label: "Personalization", href: "#personalization" },
+  { label: "Workflow", href: "#workflow" },
+  { label: "For Teachers", href: "#teachers" },
+  { label: "For Students", href: "#students" },
   { label: "Features", href: "#features" },
-  { label: "Class-wise", href: "#class-wise" },
+];
+
+const painPoints = [
+  {
+    title: "Students miss the exact concept",
+    text: "A wrong answer is often not just wrong. It shows a missing rule, weak formula use, poor wording, or careless reasoning.",
+  },
+  {
+    title: "Teachers lose time checking patterns manually",
+    text: "Finding repeated mistakes across a class takes time, especially when every student needs different support.",
+  },
+  {
+    title: "Feedback is usually too general",
+    text: "Marks alone do not tell students what to revise, why they lost marks, or how to recover before the next test.",
+  },
+];
+
+const workflow = [
+  {
+    title: "Teacher creates a diagnostic test",
+    text: "The teacher adds questions, marks, answers, class level, subject, and topic.",
+  },
+  {
+    title: "Students submit answers",
+    text: "Students answer from their dashboard in a simple, focused test interface.",
+  },
+  {
+    title: "NexaLearn analyzes learning gaps",
+    text: "The system identifies weak concepts, mistake types, score, and recovery actions.",
+  },
+  {
+    title: "Teacher and student get clear reports",
+    text: "Students receive revision tasks while teachers see patterns and remedial groups.",
+  },
+];
+
+const teacherBenefits = [
+  "Identify class-wide weak topics",
+  "Group students for remedial teaching",
+  "Reduce manual feedback workload",
+  "Track improvement across attempts",
+];
+
+const studentBenefits = [
+  "Understand what went wrong",
+  "Get simple concept explanations",
+  "Receive targeted recovery tasks",
+  "Practice based on weak areas",
 ];
 
 const features = [
   {
-    icon: ClipboardCheck,
-    title: "Teacher test creation",
-    text: "Teachers create class-wise diagnostic tests with questions, answers, marks, and difficulty.",
+    icon: ClipboardList,
+    title: "Diagnostic test system",
+    text: "Teachers can create structured tests with marks, answers, topics, and difficulty levels.",
   },
   {
-    icon: BrainCircuit,
-    title: "Python AI Agent",
-    text: "The backend AI detects mistake type, weak concept, reason, score, and revision task.",
+    icon: Target,
+    title: "Weak concept detection",
+    text: "Each wrong answer is mapped to the specific concept the student needs to revise.",
   },
   {
-    icon: Sparkles,
-    title: "Interest-based learning",
-    text: "Weak concepts are explained through anime, cricket, gaming, movies, or real-life examples.",
-  },
-  {
-    icon: UsersRound,
-    title: "Remedial groups",
-    text: "Students with similar weaknesses are grouped so teachers can reteach faster.",
+    icon: MessageSquareText,
+    title: "Mistake explanation",
+    text: "Students see why their answer was wrong and what the correct thinking should be.",
   },
   {
     icon: Layers3,
-    title: "Student recovery card",
-    text: "Students get clear feedback: what went wrong, why, correct solution, and what to revise.",
+    title: "Recovery cards",
+    text: "Every mistake becomes a short recovery plan with concept, explanation, and next task.",
+  },
+  {
+    icon: UsersRound,
+    title: "Remedial grouping",
+    text: "Teachers can identify students who need help on similar topics.",
   },
   {
     icon: LineChart,
-    title: "Teacher analytics",
-    text: "Teachers see class average, weak topics, mistake patterns, and suggested teaching actions.",
-  },
-];
-
-const classLevels = [
-  {
-    level: "Class 6–8",
-    style: "Simple, story-based, visual examples",
-    example:
-      "Force means push or pull, like pushing a door or hitting a cricket ball.",
-  },
-  {
-    level: "Class 9–10 / SEE",
-    style: "Concept + formula + daily-life examples",
-    example:
-      "Pressure increases when area decreases, like a sharp knife cutting easily.",
-  },
-  {
-    level: "Class 11–12 / NEB",
-    style: "Exam-focused explanation with formula, steps, units",
-    example:
-      "Electric field: E = F/q. Substitute values and write the final unit.",
-  },
-  {
-    level: "SAT / IELTS / PTE",
-    style: "Test strategy, mistake pattern, practice plan",
-    example: "Find the clue, predict the answer, then eliminate trap choices.",
+    title: "Progress reports",
+    text: "Students and teachers can track attempts, average score, weak areas, and improvement.",
   },
 ];
 
 function Home() {
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.12),transparent_32rem),radial-gradient(circle_at_top_right,rgba(99,102,241,0.10),transparent_30rem),#f8fafc] text-slate-950">
+    <main className="min-h-screen bg-[#f7f8fb] text-slate-950">
       <PublicNavbar />
       <HeroSection />
       <ProblemSection />
-      <HowItWorksSection />
-      <PersonalizationSection />
+      <WorkflowSection />
+      <TeacherStudentSection />
       <FeatureSection />
-      <ClassWiseSection />
+      <TrustSection />
       <CtaSection />
       <Footer />
     </main>
@@ -105,7 +128,14 @@ function Home() {
 
 function PublicNavbar() {
   const [open, setOpen] = useState(false);
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, logout, user } = useAuth();
+
+  const dashboardPath =
+    user?.role === "teacher"
+      ? "/teacher"
+      : user?.role === "student"
+        ? "/student"
+        : "/dashboard";
 
   function handleLogout() {
     logout();
@@ -113,11 +143,11 @@ function PublicNavbar() {
   }
 
   return (
-    <header className="sticky top-0 z-50 border-b border-slate-200/70 bg-white/85 backdrop-blur-xl">
+    <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur-xl">
       <div className="container-xl flex h-16 items-center justify-between">
         <Link to="/" className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-600/20">
-            <Brain className="h-5 w-5" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-950 text-white">
+            <GraduationCap className="h-5 w-5" />
           </div>
 
           <div>
@@ -125,7 +155,7 @@ function PublicNavbar() {
               NexaLearn
             </p>
             <p className="text-xs font-semibold text-slate-500">
-              AI Learning Gap Detector
+              Learning gap recovery platform
             </p>
           </div>
         </Link>
@@ -135,7 +165,7 @@ function PublicNavbar() {
             <a
               key={link.href}
               href={link.href}
-              className="text-sm font-bold text-slate-600 transition hover:text-blue-600"
+              className="text-sm font-bold text-slate-600 transition hover:text-slate-950"
             >
               {link.label}
             </a>
@@ -145,13 +175,13 @@ function PublicNavbar() {
         <div className="hidden items-center gap-3 lg:flex">
           {isAuthenticated ? (
             <>
-              <Link to="/dashboard" className="btn-secondary py-2">
+              <Link to={dashboardPath} className="btn-secondary py-2">
                 Dashboard
               </Link>
               <button
                 type="button"
                 onClick={handleLogout}
-                className="btn-primary py-2"
+                className="btn-primary bg-slate-950 py-2 hover:bg-slate-800"
               >
                 Logout
               </button>
@@ -161,7 +191,10 @@ function PublicNavbar() {
               <Link to="/login" className="btn-secondary py-2">
                 Login
               </Link>
-              <Link to="/register" className="btn-primary py-2">
+              <Link
+                to="/register"
+                className="btn-primary bg-slate-950 py-2 hover:bg-slate-800"
+              >
                 Get Started
               </Link>
             </>
@@ -171,14 +204,14 @@ function PublicNavbar() {
         <button
           type="button"
           onClick={() => setOpen((value) => !value)}
-          className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 lg:hidden"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 lg:hidden"
           aria-label="Toggle navigation"
         >
           {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
       </div>
 
-      {open && (
+      {open ? (
         <div className="border-t border-slate-200 bg-white lg:hidden">
           <div className="container-xl space-y-2 py-4">
             {navLinks.map((link) => (
@@ -186,7 +219,7 @@ function PublicNavbar() {
                 key={link.href}
                 href={link.href}
                 onClick={() => setOpen(false)}
-                className="block rounded-2xl px-4 py-3 text-sm font-bold text-slate-600 hover:bg-blue-50 hover:text-blue-700"
+                className="block rounded-xl px-4 py-3 text-sm font-bold text-slate-600 hover:bg-slate-100 hover:text-slate-950"
               >
                 {link.label}
               </a>
@@ -196,7 +229,7 @@ function PublicNavbar() {
               {isAuthenticated ? (
                 <>
                   <Link
-                    to="/dashboard"
+                    to={dashboardPath}
                     onClick={() => setOpen(false)}
                     className="btn-secondary"
                   >
@@ -205,7 +238,7 @@ function PublicNavbar() {
                   <button
                     type="button"
                     onClick={handleLogout}
-                    className="btn-primary"
+                    className="btn-primary bg-slate-950 hover:bg-slate-800"
                   >
                     Logout
                   </button>
@@ -222,7 +255,7 @@ function PublicNavbar() {
                   <Link
                     to="/register"
                     onClick={() => setOpen(false)}
-                    className="btn-primary"
+                    className="btn-primary bg-slate-950 hover:bg-slate-800"
                   >
                     Get Started
                   </Link>
@@ -231,118 +264,104 @@ function PublicNavbar() {
             </div>
           </div>
         </div>
-      )}
+      ) : null}
     </header>
   );
 }
 
 function HeroSection() {
   return (
-    <section className="relative overflow-hidden py-16 sm:py-20 lg:py-28">
-      <div className="container-xl grid gap-12 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
-        <div>
-          <div className="badge mb-6">
-            <Sparkles className="mr-2 h-4 w-4" />
-            Human-centered AI for learning recovery
-          </div>
-
-          <h1 className="max-w-4xl text-4xl font-black tracking-tight text-slate-950 sm:text-5xl lg:text-6xl">
-            Students do not hate learning. They hate learning that does not
-            connect.
-          </h1>
-
-          <p className="mt-6 max-w-2xl text-base leading-8 text-slate-600 sm:text-lg">
-            NexaLearn detects weak concepts from test answers and explains them
-            through contexts students already understand: anime, cricket,
-            gaming, movies, and real life.
-          </p>
-
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Link to="/register" className="btn-primary">
-              Start Demo
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-
-            <a href="#how-it-works" className="btn-secondary">
-              See How It Works
-            </a>
-          </div>
-
-          <div className="mt-8 grid gap-3 sm:grid-cols-3">
-            {[
-              "Detect mistake type",
-              "Generate revision task",
-              "Group weak students",
-            ].map((item) => (
-              <div
-                key={item}
-                className="flex items-center gap-2 text-sm font-bold text-slate-600"
-              >
-                <CheckCircle2 className="h-4 w-4 text-blue-600" />
-                {item}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="glass-card p-4 sm:p-6">
-          <div className="rounded-[1.7rem] bg-slate-950 p-5 text-white sm:p-6">
-            <div className="flex items-center gap-3">
-              <div className="rounded-2xl bg-blue-500 p-3">
-                <Brain className="h-6 w-6" />
-              </div>
-
-              <div>
-                <p className="text-sm text-slate-300">AI diagnosis</p>
-                <h2 className="text-lg font-black sm:text-xl">
-                  Formula mistake detected
-                </h2>
-              </div>
+    <section className="relative overflow-hidden border-b border-slate-200 bg-white">
+      <div className="container-xl py-10 sm:py-12 lg:py-16">
+        <div className="grid gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
+          <div>
+            <div className="badge-muted">
+              <School className="mr-2 h-4 w-4" />
+              Built for teachers, students, and real classrooms
             </div>
 
-            <div className="mt-6 space-y-4">
-              <ResultBlock
-                label="Weak concept"
-                value="Electric field formula application"
-              />
+            <h1 className="mt-4 max-w-5xl text-4xl font-black tracking-[-0.045em] text-slate-950 sm:text-5xl lg:text-6xl">
+              Turn every wrong answer into a clear learning recovery plan.
+            </h1>
 
-              <ResultBlock
-                label="Student interest"
-                value="Cricket strategy explanation"
-              />
+            <p className="mt-4 max-w-2xl text-base leading-8 text-slate-600 sm:text-lg">
+              NexaLearn helps teachers detect learning gaps from student
+              answers, organize weak concepts, and guide students with precise
+              revision tasks.
+            </p>
 
-              <div className="rounded-2xl bg-white/10 p-4">
-                <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
-                  Personalized explanation
-                </p>
-                <p className="mt-2 text-sm leading-6 text-slate-200">
-                  Like a batter choosing the right shot after reading the ball,
-                  first identify force and charge, then apply E = F/q.
-                </p>
-              </div>
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+              <Link to="/register" className="btn-dark px-6 py-4">
+                Start Learning Recovery
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
 
-              <div className="rounded-2xl bg-blue-500 p-4">
-                <p className="text-xs font-bold uppercase tracking-wide text-blue-100">
-                  Revision task
-                </p>
-                <p className="mt-2 text-sm font-semibold">
-                  Revise E = F/q and solve 3 similar numerical questions.
-                </p>
-              </div>
+              <a href="#workflow" className="btn-secondary px-6 py-4">
+                View Workflow
+              </a>
+            </div>
+
+            <div className="mt-6 grid gap-3 sm:grid-cols-3">
+              <Metric value="3x" label="Faster feedback loop" />
+              <Metric value="24h" label="Hackathon-ready MVP" />
+              <Metric value="2" label="Dashboards: teacher + student" />
             </div>
           </div>
 
-          <div className="mt-4 grid grid-cols-3 gap-3">
-            {[
-              ["12", "Class"],
-              ["3", "Mistake groups"],
-              ["AI", "Recovery"],
-            ].map(([value, label]) => (
-              <div key={label} className="rounded-2xl bg-white p-4 text-center">
-                <p className="text-2xl font-black text-slate-950">{value}</p>
-                <p className="mt-1 text-xs font-bold text-slate-500">{label}</p>
+          <div className="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-3 shadow-xl shadow-slate-200/70">
+            <div className="rounded-[1.35rem] bg-white p-4 shadow-sm sm:p-5">
+              <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-4">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
+                    Student Attempt Review
+                  </p>
+                  <h2 className="mt-2 text-lg font-black text-slate-950 sm:text-xl">
+                    Physics: Electric Field
+                  </h2>
+                </div>
+
+                <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-center">
+                  <p className="text-xs font-bold text-emerald-600">Score</p>
+                  <p className="text-xl font-black text-emerald-700">6/10</p>
+                </div>
               </div>
-            ))}
+
+              <div className="mt-4 space-y-3">
+                <InsightCard
+                  label="Weak concept"
+                  value="Formula application: E = F/q"
+                  tone="amber"
+                />
+
+                <InsightCard
+                  label="Mistake type"
+                  value="Correct formula selected, wrong substitution step"
+                  tone="red"
+                />
+
+                <InsightCard
+                  label="Teacher action"
+                  value="Group with students struggling in force-charge relation"
+                  tone="blue"
+                />
+
+                <div className="rounded-2xl bg-slate-950 p-4 text-white">
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
+                    Recovery task
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-slate-200">
+                    Revise electric field formula, solve 3 substitution
+                    questions, and compare units in each step.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-3 grid grid-cols-3 gap-3">
+              <SmallStat value="18" label="Attempts" />
+              <SmallStat value="5" label="Weak topics" />
+              <SmallStat value="3" label="Groups" />
+            </div>
           </div>
         </div>
       </div>
@@ -350,54 +369,65 @@ function HeroSection() {
   );
 }
 
-function ResultBlock({ label, value }) {
+function Metric({ value, label }) {
   return (
-    <div className="rounded-2xl bg-white/10 p-4">
-      <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
+    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+      <p className="text-2xl font-black text-slate-950">{value}</p>
+      <p className="mt-1 text-sm font-bold text-slate-500">{label}</p>
+    </div>
+  );
+}
+
+function InsightCard({ label, value, tone }) {
+  const tones = {
+    amber: "bg-amber-50 text-amber-800",
+    red: "bg-red-50 text-red-700",
+    blue: "bg-blue-50 text-blue-700",
+  };
+
+  return (
+    <div className={`rounded-2xl p-4 ${tones[tone] || tones.blue}`}>
+      <p className="text-xs font-black uppercase tracking-[0.16em] opacity-70">
         {label}
       </p>
-      <p className="mt-2 font-semibold text-white">{value}</p>
+      <p className="mt-2 text-sm font-bold leading-6">{value}</p>
+    </div>
+  );
+}
+
+function SmallStat({ value, label }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 text-center">
+      <p className="text-2xl font-black text-slate-950">{value}</p>
+      <p className="mt-1 text-xs font-bold text-slate-500">{label}</p>
     </div>
   );
 }
 
 function ProblemSection() {
-  const problems = [
-    {
-      title: "Low engagement",
-      text: "Students may understand complex game or anime systems, but lose interest when textbook content feels disconnected.",
-    },
-    {
-      title: "Abstract concepts feel difficult",
-      text: "Many topics feel hard because examples are not connected to real life, hobbies, or familiar stories.",
-    },
-    {
-      title: "Teachers lack time",
-      text: "Teachers cannot manually personalize explanations for every student under classroom and exam pressure.",
-    },
-  ];
-
   return (
     <section id="problem" className="py-16 sm:py-20">
       <div className="container-xl">
-        <div className="mx-auto max-w-3xl text-center">
-          <span className="badge">The education pain point</span>
-          <h2 className="mt-5 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
-            Students are not always weak. Often, the explanation format is weak.
-          </h2>
-        </div>
+        <SectionHeader
+          eyebrow="The real classroom problem"
+          title="Wrong answers contain useful data, but most systems only show marks."
+          text="NexaLearn focuses on the human learning process: what the student misunderstood, what the teacher should reteach, and what the student should practice next."
+        />
 
         <div className="mt-10 grid gap-5 md:grid-cols-3">
-          {problems.map((problem) => (
-            <article key={problem.title} className="glass-card p-6">
-              <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-red-50 text-red-600">
-                <AlertTriangle className="h-6 w-6" />
+          {painPoints.map((item) => (
+            <article
+              key={item.title}
+              className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm"
+            >
+              <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
+                <Lightbulb className="h-6 w-6" />
               </div>
               <h3 className="text-lg font-black text-slate-950">
-                {problem.title}
+                {item.title}
               </h3>
               <p className="mt-3 text-sm leading-7 text-slate-600">
-                {problem.text}
+                {item.text}
               </p>
             </article>
           ))}
@@ -407,43 +437,35 @@ function ProblemSection() {
   );
 }
 
-function HowItWorksSection() {
-  const steps = [
-    "Teacher creates class-wise test",
-    "Student submits answers",
-    "Python AI Agent analyzes mistakes",
-    "Student gets recovery card and teacher gets remedial groups",
-  ];
-
+function WorkflowSection() {
   return (
-    <section id="how-it-works" className="py-16 sm:py-20">
+    <section id="workflow" className="bg-white py-16 sm:py-20">
       <div className="container-xl">
-        <div className="grid gap-10 lg:grid-cols-[0.85fr_1.15fr] lg:items-start">
-          <div>
-            <span className="badge">Workflow</span>
-            <h2 className="mt-5 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
-              From test answers to learning recovery.
-            </h2>
-            <p className="mt-4 text-base leading-8 text-slate-600">
-              NexaLearn is not a normal chatbot. The main engine is a Python AI
-              Agent that converts mistakes into useful learning data.
-            </p>
-          </div>
+        <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
+          <SectionHeader
+            align="left"
+            eyebrow="How it works"
+            title="A simple flow from test submission to learning recovery."
+            text="The platform helps teachers keep control of learning while reducing repetitive analysis work."
+          />
 
-          <div className="grid gap-4">
-            {steps.map((step, index) => (
-              <div key={step} className="glass-card flex gap-5 p-5">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-sm font-black text-white">
+          <div className="space-y-4">
+            {workflow.map((step, index) => (
+              <article
+                key={step.title}
+                className="flex gap-5 rounded-[2rem] border border-slate-200 bg-slate-50 p-5"
+              >
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-sm font-black text-white">
                   {index + 1}
                 </div>
+
                 <div>
-                  <h3 className="font-black text-slate-950">{step}</h3>
+                  <h3 className="font-black text-slate-950">{step.title}</h3>
                   <p className="mt-2 text-sm leading-7 text-slate-600">
-                    This step keeps teachers in control while AI reduces manual
-                    diagnosis workload.
+                    {step.text}
                   </p>
                 </div>
-              </div>
+              </article>
             ))}
           </div>
         </div>
@@ -452,77 +474,96 @@ function HowItWorksSection() {
   );
 }
 
-function PersonalizationSection() {
+function TeacherStudentSection() {
   return (
-    <section id="personalization" className="py-16 sm:py-20">
+    <section className="py-16 sm:py-20">
       <div className="container-xl">
-        <div className="glass-card overflow-hidden">
-          <div className="grid gap-0 lg:grid-cols-[0.95fr_1.05fr]">
-            <div className="bg-slate-950 p-8 text-white sm:p-10">
-              <span className="inline-flex rounded-full bg-white/10 px-3 py-1 text-xs font-black text-blue-200">
-                Unique hook
-              </span>
-              <h2 className="mt-5 text-3xl font-black tracking-tight sm:text-4xl">
-                Teach the same concept in the student’s language.
-              </h2>
-              <p className="mt-4 text-base leading-8 text-slate-300">
-                NexaLearn explains weak concepts through interests while keeping
-                the original academic meaning correct.
-              </p>
-            </div>
+        <div className="grid gap-6 lg:grid-cols-2">
+          <AudienceCard
+            id="teachers"
+            icon={School}
+            title="For teachers"
+            description="Understand which concepts need reteaching without checking every pattern manually."
+            items={teacherBenefits}
+            cta="Teacher Dashboard"
+            to="/teacher"
+          />
 
-            <div className="grid gap-4 p-6 sm:grid-cols-2 sm:p-8">
-              {[
-                ["Anime", "Power systems, abilities, battles", Brain],
-                ["Cricket", "Strategy, shots, fielding zones", Trophy],
-                ["Gaming", "Levels, skills, checkpoints", Gamepad2],
-                [
-                  "Real life",
-                  "Daily examples and practical logic",
-                  GraduationCap,
-                ],
-              ].map(([title, text, Icon]) => (
-                <div key={title} className="rounded-3xl bg-white p-5">
-                  <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
-                    <Icon className="h-5 w-5" />
-                  </div>
-                  <h3 className="font-black text-slate-950">{title}</h3>
-                  <p className="mt-2 text-sm leading-7 text-slate-600">
-                    {text}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
+          <AudienceCard
+            id="students"
+            icon={BookOpenCheck}
+            title="For students"
+            description="Get feedback that explains what went wrong and what to revise next."
+            items={studentBenefits}
+            cta="Student Dashboard"
+            to="/student"
+          />
         </div>
       </div>
     </section>
   );
 }
 
+function AudienceCard({ id, icon: Icon, title, description, items, cta, to }) {
+  return (
+    <article
+      id={id}
+      className="rounded-[2rem] border border-slate-200 bg-white p-7 shadow-sm"
+    >
+      <div className="flex h-13 w-13 items-center justify-center rounded-2xl bg-slate-950 p-3 text-white">
+        <Icon className="h-6 w-6" />
+      </div>
+
+      <h2 className="mt-6 text-2xl font-black text-slate-950">{title}</h2>
+      <p className="mt-3 text-sm leading-7 text-slate-600">{description}</p>
+
+      <div className="mt-6 space-y-3">
+        {items.map((item) => (
+          <div key={item} className="flex items-center gap-3">
+            <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+            <span className="text-sm font-bold text-slate-700">{item}</span>
+          </div>
+        ))}
+      </div>
+
+      <Link
+        to={to}
+        className="mt-7 inline-flex items-center text-sm font-black text-slate-950 transition hover:text-blue-700"
+      >
+        {cta}
+        <ChevronRight className="ml-1 h-4 w-4" />
+      </Link>
+    </article>
+  );
+}
+
 function FeatureSection() {
   return (
-    <section id="features" className="py-16 sm:py-20">
+    <section id="features" className="bg-white py-16 sm:py-20">
       <div className="container-xl">
-        <div className="mx-auto max-w-3xl text-center">
-          <span className="badge">MVP features</span>
-          <h2 className="mt-5 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
-            Built for students and teachers, not just for AI hype.
-          </h2>
-        </div>
+        <SectionHeader
+          eyebrow="Core platform features"
+          title="Everything is designed around recovery, not just testing."
+          text="The goal is to help students improve after mistakes and help teachers respond faster."
+        />
 
         <div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
           {features.map((feature) => {
             const Icon = feature.icon;
 
             return (
-              <article key={feature.title} className="glass-card p-6">
-                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+              <article
+                key={feature.title}
+                className="rounded-[2rem] border border-slate-200 bg-slate-50 p-6 transition hover:-translate-y-1 hover:bg-white hover:shadow-lg hover:shadow-slate-200/70"
+              >
+                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-slate-900 shadow-sm">
                   <Icon className="h-6 w-6" />
                 </div>
+
                 <h3 className="text-lg font-black text-slate-950">
                   {feature.title}
                 </h3>
+
                 <p className="mt-3 text-sm leading-7 text-slate-600">
                   {feature.text}
                 </p>
@@ -535,72 +576,90 @@ function FeatureSection() {
   );
 }
 
-function ClassWiseSection() {
+function TrustSection() {
   return (
-    <section id="class-wise" className="py-16 sm:py-20">
+    <section className="py-16 sm:py-20">
       <div className="container-xl">
-        <div className="mx-auto max-w-3xl text-center">
-          <span className="badge">Class-wise adaptation</span>
-          <h2 className="mt-5 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
-            Same topic. Different explanation depth.
-          </h2>
-        </div>
-
-        <div className="mt-10 grid gap-5 lg:grid-cols-2">
-          {classLevels.map((item) => (
-            <div key={item.level} className="glass-card p-6">
-              <h3 className="text-xl font-black text-slate-950">
-                {item.level}
-              </h3>
-              <p className="mt-4 text-sm font-bold text-slate-700">
-                {item.style}
-              </p>
-              <div className="mt-4 rounded-2xl bg-slate-50 p-4">
-                <p className="text-xs font-black uppercase tracking-wide text-slate-400">
-                  Example
-                </p>
-                <p className="mt-2 text-sm leading-7 text-slate-600">
-                  {item.example}
-                </p>
+        <div className="rounded-[2rem] border border-slate-200 bg-slate-950 p-8 text-white shadow-xl sm:p-10">
+          <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-black text-slate-200">
+                <ShieldCheck className="h-4 w-4" />
+                Human intelligence first
               </div>
+
+              <h2 className="mt-5 text-3xl font-black tracking-tight sm:text-4xl">
+                Technology supports the teacher. It does not replace the
+                teacher.
+              </h2>
             </div>
-          ))}
+
+            <p className="text-base leading-8 text-slate-300">
+              NexaLearn is designed as a decision-support platform for learning
+              recovery. Teachers create the learning structure, students attempt
+              the work, and the system helps organize feedback into useful
+              actions.
+            </p>
+          </div>
+
+          <div className="mt-8 grid gap-4 sm:grid-cols-3">
+            <TrustItem
+              title="Teacher-led"
+              text="Teachers control tests and interventions."
+            />
+            <TrustItem
+              title="Student-focused"
+              text="Feedback is written for recovery."
+            />
+            <TrustItem
+              title="Data-informed"
+              text="Reports show patterns, not just marks."
+            />
+          </div>
         </div>
       </div>
     </section>
   );
 }
 
+function TrustItem({ title, text }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+      <h3 className="font-black text-white">{title}</h3>
+      <p className="mt-2 text-sm leading-6 text-slate-400">{text}</p>
+    </div>
+  );
+}
+
 function CtaSection() {
   return (
-    <section className="py-16 sm:py-20">
+    <section className="bg-white py-16 sm:py-20">
       <div className="container-xl">
-        <div className="overflow-hidden rounded-[2rem] bg-gradient-to-br from-blue-600 to-indigo-700 p-8 text-white shadow-xl sm:p-12">
-          <div className="mx-auto max-w-3xl text-center">
-            <h2 className="text-3xl font-black tracking-tight sm:text-4xl">
-              Turn wrong answers into personalized learning recovery.
-            </h2>
-            <p className="mt-4 text-base leading-8 text-blue-100">
-              Create a test, let the student answer, then watch NexaLearn detect
-              gaps and generate revision tasks.
-            </p>
+        <div className="rounded-[2rem] border border-slate-200 bg-[#f7f8fb] p-8 text-center shadow-sm sm:p-12">
+          <h2 className="mx-auto max-w-3xl text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
+            Build better feedback loops for every student attempt.
+          </h2>
 
-            <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-              <Link
-                to="/register"
-                className="inline-flex items-center justify-center rounded-2xl bg-white px-5 py-3 text-sm font-black text-blue-700 transition hover:-translate-y-0.5"
-              >
-                Create Account
-                <ChevronRight className="ml-2 h-4 w-4" />
-              </Link>
+          <p className="mx-auto mt-4 max-w-2xl text-base leading-8 text-slate-600">
+            Start with a diagnostic test, identify weak areas, and guide
+            students toward focused recovery.
+          </p>
 
-              <Link
-                to="/login"
-                className="inline-flex items-center justify-center rounded-2xl border border-white/30 px-5 py-3 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-white/10"
-              >
-                Login
-              </Link>
-            </div>
+          <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+            <Link
+              to="/register"
+              className="inline-flex items-center justify-center rounded-2xl bg-slate-950 px-6 py-4 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-slate-800"
+            >
+              Create Account
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+
+            <Link
+              to="/login"
+              className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-6 py-4 text-sm font-black text-slate-700 transition hover:-translate-y-0.5 hover:bg-slate-50"
+            >
+              Login
+            </Link>
           </div>
         </div>
       </div>
@@ -610,60 +669,81 @@ function CtaSection() {
 
 function Footer() {
   return (
-    <footer className="border-t border-slate-200 bg-slate-950 text-white">
-      <div className="container-xl py-12">
-        <div className="grid gap-10 lg:grid-cols-[1.2fr_0.8fr_0.8fr]">
+    <footer className="border-t border-slate-200 bg-white">
+      <div className="container-xl py-10">
+        <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr_0.8fr]">
           <div>
             <Link to="/" className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-600 text-white">
-                <Brain className="h-6 w-6" />
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-950 text-white">
+                <GraduationCap className="h-6 w-6" />
               </div>
+
               <div>
-                <p className="text-lg font-black">NexaLearn</p>
-                <p className="text-sm text-slate-400">
-                  Human-centered AI for learning recovery.
+                <p className="text-lg font-black text-slate-950">NexaLearn</p>
+                <p className="text-sm font-medium text-slate-500">
+                  Learning gap recovery platform
                 </p>
               </div>
             </Link>
 
-            <p className="mt-5 max-w-md text-sm leading-7 text-slate-400">
-              NexaLearn helps teachers detect learning gaps and helps students
-              understand weak concepts through examples connected to their
-              interests.
+            <p className="mt-5 max-w-md text-sm leading-7 text-slate-500">
+              NexaLearn helps schools turn assessment results into specific
+              learning recovery actions.
             </p>
           </div>
 
           <div>
-            <h3 className="font-black">Product</h3>
-            <div className="mt-4 space-y-3 text-sm text-slate-400">
-              <a href="#problem" className="block hover:text-white">
+            <h3 className="font-black text-slate-950">Product</h3>
+            <div className="mt-4 space-y-3 text-sm font-semibold text-slate-500">
+              <a href="#problem" className="block hover:text-slate-950">
                 Problem
               </a>
-              <a href="#how-it-works" className="block hover:text-white">
-                How it works
+              <a href="#workflow" className="block hover:text-slate-950">
+                Workflow
               </a>
-              <a href="#features" className="block hover:text-white">
+              <a href="#features" className="block hover:text-slate-950">
                 Features
               </a>
             </div>
           </div>
 
           <div>
-            <h3 className="font-black">Stack</h3>
-            <div className="mt-4 space-y-3 text-sm text-slate-400">
-              <p>React + Tailwind CSS</p>
-              <p>Django REST Framework</p>
-              <p>Python AI Agent</p>
-              <p>JWT Authentication</p>
+            <h3 className="font-black text-slate-950">Platform</h3>
+            <div className="mt-4 space-y-3 text-sm font-semibold text-slate-500">
+              <p>Teacher Dashboard</p>
+              <p>Student Dashboard</p>
+              <p>Reports & Recovery</p>
             </div>
           </div>
         </div>
 
-        <div className="mt-10 border-t border-white/10 pt-6 text-sm text-slate-400">
-          © {new Date().getFullYear()} NexaLearn. Built for education impact.
+        <div className="mt-10 border-t border-slate-200 pt-6 text-center text-sm font-medium text-slate-500">
+          © {new Date().getFullYear()} NexaLearn. Built for classroom learning
+          recovery.
         </div>
       </div>
     </footer>
+  );
+}
+
+function SectionHeader({ eyebrow, title, text, align = "center" }) {
+  const alignment =
+    align === "left" ? "text-left" : "mx-auto max-w-3xl text-center";
+
+  return (
+    <div className={alignment}>
+      <span className="inline-flex rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-black text-slate-700">
+        {eyebrow}
+      </span>
+
+      <h2 className="mt-5 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
+        {title}
+      </h2>
+
+      {text ? (
+        <p className="mt-4 text-base leading-8 text-slate-600">{text}</p>
+      ) : null}
+    </div>
   );
 }
 

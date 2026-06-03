@@ -1,56 +1,110 @@
+from __future__ import annotations
+
 from django.contrib import admin
 
-from .models import AnswerAttempt, Attempt
+from .models import Attempt, AttemptAnswer, Mistake
 
 
-class AnswerAttemptInline(admin.TabularInline):
-    model = AnswerAttempt
+class AttemptAnswerInline(admin.TabularInline):
+    model = AttemptAnswer
     extra = 0
-    readonly_fields = [
+    readonly_fields = (
+        "question",
+        "student_answer",
         "is_correct",
-        "score",
-        "mistake_type",
+        "marks_awarded",
+    )
+    can_delete = False
+
+
+class MistakeInline(admin.TabularInline):
+    model = Mistake
+    extra = 0
+    readonly_fields = (
+        "question",
         "weak_concept",
-        "ai_reason",
-        "correct_solution",
-        "interest_based_explanation",
+        "mistake_type",
+        "explanation",
+        "personalized_explanation",
         "revision_task",
-        "created_at",
-    ]
+    )
+    can_delete = False
 
 
 @admin.register(Attempt)
 class AttemptAdmin(admin.ModelAdmin):
-    list_display = [
+    list_display = (
+        "id",
         "student",
         "test",
-        "total_score",
+        "obtained_marks",
         "total_marks",
         "percentage",
-        "submitted_at",
-    ]
-    list_filter = ["test__subject", "test__class_level", "submitted_at"]
-    search_fields = [
+        "created_at",
+    )
+    list_filter = (
+        "test",
+        "created_at",
+    )
+    search_fields = (
+        "student__username",
         "student__email",
-        "student__full_name",
         "test__title",
-    ]
-    inlines = [AnswerAttemptInline]
+    )
+    readonly_fields = (
+        "total_marks",
+        "obtained_marks",
+        "percentage",
+        "created_at",
+    )
+    inlines = (
+        AttemptAnswerInline,
+        MistakeInline,
+    )
+    ordering = ("-created_at",)
 
 
-@admin.register(AnswerAttempt)
-class AnswerAttemptAdmin(admin.ModelAdmin):
-    list_display = [
+@admin.register(AttemptAnswer)
+class AttemptAnswerAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
         "attempt",
         "question",
         "is_correct",
-        "score",
+        "marks_awarded",
+    )
+    list_filter = (
+        "is_correct",
+    )
+    search_fields = (
+        "attempt__student__username",
+        "attempt__student__email",
+        "question__text",
+    )
+
+
+@admin.register(Mistake)
+class MistakeAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "attempt",
+        "question",
+        "weak_concept",
+        "mistake_type",
+        "created_at",
+    )
+    list_filter = (
         "mistake_type",
         "weak_concept",
-    ]
-    list_filter = ["is_correct", "mistake_type"]
-    search_fields = [
+        "created_at",
+    )
+    search_fields = (
+        "attempt__student__username",
         "attempt__student__email",
-        "question__question_text",
+        "question__text",
         "weak_concept",
-    ]
+        "mistake_type",
+    )
+    readonly_fields = (
+        "created_at",
+    )

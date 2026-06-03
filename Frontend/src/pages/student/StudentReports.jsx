@@ -1,177 +1,146 @@
-import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
-  ArrowRight,
   BarChart3,
-  Brain,
   CheckCircle2,
   ClipboardList,
   Loader2,
-  RefreshCcw,
+  RefreshCw,
   Target,
   Trophy,
-  XCircle,
 } from "lucide-react";
 
 import DashboardLayout from "../../layouts/DashboardLayout";
-import api from "../../services/api";
+import { getStudentReports } from "../../services/reportService";
 
-function StudentReports() {
-  const [reports, setReports] = useState([]);
-  const [summary, setSummary] = useState({
+const defaultData = {
+  summary: {
     total_attempts: 0,
     average_score: 0,
-    weak_concepts: 0,
+    weak_concepts_count: 0,
     completed_tests: 0,
-  });
+  },
+  attempts: [],
+  weak_concepts: [],
+  mistake_patterns: [],
+  recovery_tasks: [],
+};
+
+export default function StudentReports() {
+  const [data, setData] = useState(defaultData);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    fetchReports();
-  }, []);
+  const summary = useMemo(() => {
+    const source = data?.summary || data?.stats || {};
 
-  const normalizeReports = (data) => {
-    if (Array.isArray(data)) return data;
-    if (Array.isArray(data?.results)) return data.results;
-    if (Array.isArray(data?.reports)) return data.reports;
-    if (Array.isArray(data?.attempts)) return data.attempts;
-    return [];
-  };
+    return {
+      total_attempts:
+        source.total_attempts ||
+        source.totalAttempts ||
+        data?.attempts?.length ||
+        data?.reports?.length ||
+        0,
+      average_score:
+        source.average_score || source.averageScore || source.avg_score || 0,
+      weak_concepts_count:
+        source.weak_concepts_count ||
+        source.weakConceptsCount ||
+        data?.weak_concepts?.length ||
+        0,
+      completed_tests: source.completed_tests || source.completedTests || 0,
+    };
+  }, [data]);
 
-  const fetchReports = async () => {
+  const attempts = Array.isArray(data?.attempts)
+    ? data.attempts
+    : Array.isArray(data?.reports)
+      ? data.reports
+      : [];
+
+  const weakConcepts = Array.isArray(data?.weak_concepts)
+    ? data.weak_concepts
+    : [];
+
+  const mistakePatterns = Array.isArray(data?.mistake_patterns)
+    ? data.mistake_patterns
+    : [];
+
+  const recoveryTasks = Array.isArray(data?.recovery_tasks)
+    ? data.recovery_tasks
+    : [];
+
+  async function loadReports() {
+    setLoading(true);
+    setError("");
+
     try {
-      setLoading(true);
-      setError("");
+      const response = await getStudentReports();
 
-      const response = await api.get("/reports/student/");
-
-      const normalized = normalizeReports(response.data);
-      setReports(normalized);
-
-      const scores = normalized
-        .map((item) => Number(item.score || item.percentage || item.total_score || 0))
-        .filter((score) => !Number.isNaN(score));
-
-      const averageScore =
-        scores.length > 0
-          ? Math.round(scores.reduce((total, score) => total + score, 0) / scores.length)
-          : 0;
-
-      const weakConceptCount = normalized.reduce((total, item) => {
-        const concepts =
-          item.weak_concepts ||
-          item.weak_topics ||
-          item.mistakes ||
-          item.mistake_summary ||
-          [];
-
-        if (Array.isArray(concepts)) return total + concepts.length;
-        return total;
-      }, 0);
-
-      setSummary({
-        total_attempts: normalized.length,
-        average_score: averageScore,
-        weak_concepts: weakConceptCount,
-        completed_tests: normalized.length,
+      setData({
+        ...defaultData,
+        ...response,
+        summary: {
+          ...defaultData.summary,
+          ...(response?.summary || response?.stats || {}),
+        },
+        attempts: response?.attempts || response?.reports || [],
+        weak_concepts: response?.weak_concepts || [],
+        mistake_patterns: response?.mistake_patterns || [],
+        recovery_tasks: response?.recovery_tasks || [],
       });
     } catch (err) {
-      setError(
-        err?.response?.data?.detail ||
-          err?.response?.data?.error ||
-          "Could not load reports. Check backend route: /api/reports/student/"
-      );
-      setReports([]);
-      setSummary({
-        total_attempts: 0,
-        average_score: 0,
-        weak_concepts: 0,
-        completed_tests: 0,
+      console.error("Report loading failed:", {
+        status: err?.response?.status,
+        data: err?.response?.data,
+        message: err?.message,
       });
+
+      const status = err?.response?.status;
+
+      if (status === 401) {
+        setError("Login token expired. Log out and log in again.");
+      } else if (status === 404) {
+        setError(
+          "Reports route not found. Check backend route: /api/reports/student/",
+        );
+      } else if (status === 500) {
+        setError(
+          "Backend reports view crashed. Check Django terminal traceback.",
+        );
+      } else {
+        setError(
+          "Could not load reports. Check backend route: /api/reports/student/",
+        );
+      }
+
+      setData(defaultData);
     } finally {
       setLoading(false);
     }
-  };
-
-  const getAttemptId = (report) => {
-    return report.id || report.attempt_id || report.attempt?.id || report.pk;
-  };
-
-  const getTitle = (report) => {
-    return (
-      report.test?.title ||
-      report.test_title ||
-      report.title ||
-      report.subject ||
-      "Diagnostic Test"
-    );
-  };
-
-  const getSubject = (report) => {
-    return report.test?.subject || report.subject || "General";
-  };
-
-  const getScore = (report) => {
-    return Number(report.score || report.percentage || report.total_score || 0);
-  };
-
-  const getDate = (report) => {
-    const rawDate =
-      report.created_at ||
-      report.submitted_at ||
-      report.completed_at ||
-      report.date;
-
-    if (!rawDate) return "No date";
-
-    try {
-      return new Date(rawDate).toLocaleDateString();
-    } catch {
-      return "No date";
-    }
-  };
-
-  const getMistakeCount = (report) => {
-    if (typeof report.mistake_count === "number") return report.mistake_count;
-    if (Array.isArray(report.mistakes)) return report.mistakes.length;
-    if (Array.isArray(report.weak_concepts)) return report.weak_concepts.length;
-    return 0;
-  };
-
-  if (loading) {
-    return (
-      <DashboardLayout role="student">
-        <main className="flex min-h-screen items-center justify-center bg-slate-50">
-          <div className="flex items-center gap-3 rounded-3xl border border-slate-200 bg-white px-6 py-5 shadow-sm">
-            <Loader2 className="h-5 w-5 animate-spin text-indigo-600" />
-            <p className="text-sm font-semibold text-slate-700">
-              Loading reports...
-            </p>
-          </div>
-        </main>
-      </DashboardLayout>
-    );
   }
+
+  useEffect(() => {
+    loadReports();
+  }, []);
 
   return (
     <DashboardLayout role="student">
       <main className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-7xl space-y-6">
-          <section className="overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-blue-600 to-slate-900 p-6 text-white shadow-sm sm:p-8">
-            <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+        <div className="mx-auto max-w-6xl space-y-6">
+          <section className="rounded-[2rem] bg-gradient-to-br from-indigo-600 via-blue-600 to-slate-950 p-8 text-white shadow-sm">
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
               <div>
-                <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold ring-1 ring-white/20">
-                  <BarChart3 className="h-3.5 w-3.5" />
+                <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-black">
+                  <BarChart3 className="h-4 w-4" />
                   Student Reports
                 </div>
 
-                <h1 className="mt-5 text-2xl font-bold tracking-tight sm:text-4xl">
+                <h1 className="mt-6 text-3xl font-black tracking-tight sm:text-4xl">
                   Track your mistakes and recovery progress.
                 </h1>
 
-                <p className="mt-4 max-w-2xl text-sm leading-7 text-indigo-50 sm:text-base">
+                <p className="mt-4 max-w-3xl text-sm leading-7 text-blue-50">
                   Review your test attempts, weak concepts, mistake patterns,
                   and AI-powered recovery tasks.
                 </p>
@@ -179,166 +148,150 @@ function StudentReports() {
 
               <button
                 type="button"
-                onClick={fetchReports}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-bold text-indigo-700 transition hover:bg-indigo-50"
+                onClick={loadReports}
+                disabled={loading}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-6 py-4 text-sm font-black text-indigo-700 transition hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-70"
               >
-                <RefreshCcw className="h-4 w-4" />
+                {loading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4" />
+                )}
                 Refresh
               </button>
             </div>
           </section>
 
-          {error && (
-            <div className="flex items-start gap-3 rounded-3xl border border-red-200 bg-red-50 p-5 text-sm text-red-700">
-              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
-              <div>
-                <p className="font-semibold">Report loading failed</p>
-                <p className="mt-1">{error}</p>
+          {error ? (
+            <section className="rounded-2xl border border-red-200 bg-red-50 p-5">
+              <div className="flex items-start gap-3 text-red-700">
+                <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+                <div>
+                  <p className="text-sm font-black">Report loading failed</p>
+                  <p className="mt-1 text-sm font-medium">{error}</p>
+                </div>
               </div>
-            </div>
-          )}
+            </section>
+          ) : null}
 
-          <section className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
-            <SummaryCard
+          <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <StatCard
               label="Total Attempts"
               value={summary.total_attempts}
-              icon={ClipboardList}
-              tone="bg-blue-50 text-blue-600"
+              icon={<ClipboardList className="h-5 w-5" />}
+              tone="blue"
             />
 
-            <SummaryCard
+            <StatCard
               label="Average Score"
               value={`${summary.average_score}%`}
-              icon={Trophy}
-              tone="bg-emerald-50 text-emerald-600"
+              icon={<Trophy className="h-5 w-5" />}
+              tone="emerald"
             />
 
-            <SummaryCard
+            <StatCard
               label="Weak Concepts"
-              value={summary.weak_concepts}
-              icon={Target}
-              tone="bg-red-50 text-red-600"
+              value={summary.weak_concepts_count}
+              icon={<Target className="h-5 w-5" />}
+              tone="red"
             />
 
-            <SummaryCard
+            <StatCard
               label="Completed Tests"
               value={summary.completed_tests}
-              icon={CheckCircle2}
-              tone="bg-indigo-50 text-indigo-600"
+              icon={<CheckCircle2 className="h-5 w-5" />}
+              tone="indigo"
             />
           </section>
 
-          {reports.length === 0 ? (
-            <section className="rounded-3xl border border-slate-200 bg-white p-10 text-center shadow-sm">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-600">
-                <BarChart3 className="h-7 w-7" />
-              </div>
-
-              <h2 className="mt-5 text-xl font-bold text-slate-950">
+          {loading ? (
+            <section className="rounded-[2rem] border border-slate-200 bg-white p-12 text-center shadow-sm">
+              <Loader2 className="mx-auto h-10 w-10 animate-spin text-indigo-600" />
+              <p className="mt-4 text-sm font-bold text-slate-600">
+                Loading reports...
+              </p>
+            </section>
+          ) : attempts.length === 0 ? (
+            <section className="rounded-[2rem] border border-slate-200 bg-white p-12 text-center shadow-sm">
+              <BarChart3 className="mx-auto h-12 w-12 text-slate-300" />
+              <h2 className="mt-5 text-xl font-black text-slate-950">
                 No reports yet
               </h2>
-
-              <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-600">
+              <p className="mt-2 text-sm text-slate-500">
                 Complete a diagnostic test first. Your attempt report and
                 mistake analysis will appear here.
               </p>
-
-              <Link
-                to="/student/tests"
-                className="mt-6 inline-flex items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-indigo-700"
-              >
-                Go to Tests
-                <ArrowRight className="h-4 w-4" />
-              </Link>
             </section>
           ) : (
-            <section className="rounded-3xl border border-slate-200 bg-white shadow-sm">
-              <div className="border-b border-slate-100 p-5 sm:p-6">
-                <h2 className="text-lg font-bold text-slate-950">
-                  Attempt History
-                </h2>
-                <p className="mt-1 text-sm leading-6 text-slate-600">
-                  Click “Review Mistakes” to view detailed AI recovery guidance.
-                </p>
+            <section className="grid gap-6 lg:grid-cols-[1fr_360px]">
+              <div className="space-y-4">
+                {attempts.map((attempt) => (
+                  <AttemptCard key={attempt.id} attempt={attempt} />
+                ))}
               </div>
 
-              <div className="divide-y divide-slate-100">
-                {reports.map((report, index) => {
-                  const attemptId = getAttemptId(report);
-                  const score = getScore(report);
-                  const mistakeCount = getMistakeCount(report);
-
-                  return (
-                    <article
-                      key={attemptId || index}
-                      className="grid gap-4 p-5 transition hover:bg-slate-50 sm:p-6 lg:grid-cols-[1fr_160px_170px]"
-                    >
-                      <div className="flex items-start gap-4">
-                        <div
-                          className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${
-                            score >= 70
-                              ? "bg-emerald-50 text-emerald-600"
-                              : "bg-red-50 text-red-600"
-                          }`}
+              <aside className="space-y-4">
+                <Panel title="Weak Concepts">
+                  {weakConcepts.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {weakConcepts.map((concept) => (
+                        <span
+                          key={concept}
+                          className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700"
                         >
-                          {score >= 70 ? (
-                            <CheckCircle2 className="h-6 w-6" />
-                          ) : (
-                            <XCircle className="h-6 w-6" />
-                          )}
-                        </div>
+                          {concept}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <EmptySmall text="No weak concepts detected yet." />
+                  )}
+                </Panel>
 
-                        <div>
-                          <h3 className="font-bold text-slate-950">
-                            {getTitle(report)}
-                          </h3>
-
-                          <p className="mt-1 text-sm text-slate-500">
-                            {getSubject(report)} • {getDate(report)}
-                          </p>
-
-                          <div className="mt-3 flex flex-wrap gap-2">
-                            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                              {mistakeCount} mistakes
-                            </span>
-
-                            <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-600">
-                              AI Recovery Available
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center lg:justify-center">
-                        <div>
-                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                            Score
-                          </p>
-                          <p className="mt-1 text-2xl font-bold text-slate-950">
-                            {score}%
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center lg:justify-end">
-                        {attemptId ? (
-                          <Link
-                            to={`/student/reports/${attemptId}/mistakes`}
-                            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-indigo-700"
-                          >
-                            Review Mistakes
-                            <Brain className="h-4 w-4" />
-                          </Link>
-                        ) : (
-                          <span className="rounded-2xl bg-slate-100 px-4 py-3 text-sm font-semibold text-slate-500">
-                            No attempt ID
+                <Panel title="Mistake Patterns">
+                  {mistakePatterns.length > 0 ? (
+                    <div className="space-y-3">
+                      {mistakePatterns.map((item) => (
+                        <div
+                          key={item.type}
+                          className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3"
+                        >
+                          <span className="text-sm font-bold text-slate-700">
+                            {item.type}
                           </span>
-                        )}
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
+                          <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-slate-900">
+                            {item.count}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <EmptySmall text="No mistake patterns yet." />
+                  )}
+                </Panel>
+
+                <Panel title="Recovery Tasks">
+                  {recoveryTasks.length > 0 ? (
+                    <div className="space-y-3">
+                      {recoveryTasks.map((task) => (
+                        <div
+                          key={task.id}
+                          className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                        >
+                          <p className="text-sm font-black text-slate-950">
+                            {task.concept}
+                          </p>
+                          <p className="mt-2 text-sm leading-6 text-slate-600">
+                            {task.task}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <EmptySmall text="No recovery tasks yet." />
+                  )}
+                </Panel>
+              </aside>
             </section>
           )}
         </div>
@@ -347,21 +300,98 @@ function StudentReports() {
   );
 }
 
-function SummaryCard({ label, value, icon: Icon, tone }) {
+function StatCard({ label, value, icon, tone }) {
+  const tones = {
+    blue: "bg-blue-50 text-blue-600",
+    emerald: "bg-emerald-50 text-emerald-600",
+    red: "bg-red-50 text-red-600",
+    indigo: "bg-indigo-50 text-indigo-600",
+  };
+
   return (
-    <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold text-slate-500">{label}</p>
-          <p className="mt-2 text-3xl font-bold text-slate-950">{value}</p>
+          <p className="text-sm font-bold text-slate-500">{label}</p>
+          <p className="mt-3 text-3xl font-black text-slate-950">{value}</p>
         </div>
 
-        <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${tone}`}>
-          <Icon className="h-6 w-6" />
+        <div
+          className={`flex h-12 w-12 items-center justify-center rounded-2xl ${
+            tones[tone] || tones.blue
+          }`}
+        >
+          {icon}
         </div>
       </div>
+    </div>
+  );
+}
+
+function AttemptCard({ attempt }) {
+  return (
+    <article className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <h3 className="text-lg font-black text-slate-950">
+            {attempt.test_title || attempt.title || "Practice Test"}
+          </h3>
+
+          <p className="mt-2 text-sm font-bold text-slate-500">
+            {attempt.subject || "General"} • {attempt.topic || "General"}
+          </p>
+
+          {attempt.created_at ? (
+            <p className="mt-2 text-xs font-semibold text-slate-400">
+              {new Date(attempt.created_at).toLocaleString()}
+            </p>
+          ) : null}
+        </div>
+
+        <div className="rounded-2xl bg-slate-50 px-5 py-4 text-center">
+          <p className="text-xs font-bold text-slate-500">Score</p>
+          <p className="mt-1 text-2xl font-black text-slate-950">
+            {attempt.percentage || 0}%
+          </p>
+        </div>
+      </div>
+
+      {Array.isArray(attempt.mistakes) && attempt.mistakes.length > 0 ? (
+        <div className="mt-5 space-y-3">
+          {attempt.mistakes.map((mistake) => (
+            <div
+              key={mistake.id}
+              className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+            >
+              <p className="text-sm font-black text-slate-950">
+                {mistake.weak_concept}
+              </p>
+              <p className="mt-1 text-xs font-bold uppercase tracking-wide text-red-500">
+                {mistake.mistake_type}
+              </p>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                {mistake.explanation || "No explanation saved."}
+              </p>
+              <p className="mt-2 text-sm font-bold text-indigo-700">
+                {mistake.revision_task}
+              </p>
+            </div>
+          ))}
+        </div>
+      ) : null}
     </article>
   );
 }
 
-export default StudentReports;
+function Panel({ title, children }) {
+  return (
+    <section className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
+      <h3 className="text-base font-black text-slate-950">{title}</h3>
+      <div className="mt-4">{children}</div>
+    </section>
+  );
+}
+
+function EmptySmall({ text }) {
+  return <p className="text-sm font-medium text-slate-500">{text}</p>;
+}

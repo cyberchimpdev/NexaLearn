@@ -1,193 +1,217 @@
 from __future__ import annotations
 
-import os
 from typing import Any
 
-import google.generativeai as genai
 from django.conf import settings
 from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .services import AIAnalysisService
+from .gemini_client import gemini_client
+from .practice_evaluator import ai_practice_evaluator
+from .prompts import chat_prompt
+from .quiz_generator import ai_practice_quiz_generator
+from .schemas import AnswerAnalysisInput, ChatInput
+from .serializers import (
+    AnalyzeAnswerSerializer,
+    ChatSerializer,
+    EvaluatePracticeSerializer,
+    GenerateQuizSerializer,
+)
+from .services import local_learning_agent
 
 
-def get_gemini_api_key() -> str:
-    return (
-        os.getenv("GEMINI_API_KEY")
-        or getattr(settings, "GEMINI_API_KEY", "")
-        or ""
-    )
+class AIHealthCheckView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, *args: Any, **kwargs: Any) -> Response:
+        available_models = gemini_client.list_available_models()
+        result = gemini_client.generate_text("Reply with only this word: OK")
+
+        return Response(
+            {
+                "status": "ok",
+                "service": "NexaLearn AI Agent",
+                "gemini_configured": gemini_client.is_configured(),
+                "gemini_live": bool(result.get("ok")),
+                "configured_model": getattr(settings, "GEMINI_MODEL", "gemini-2.5-flash"),
+                "working_model": result.get("model", ""),
+                "gemini_error": result.get("error", ""),
+                "tried_models": result.get("tried_models", []),
+                "available_models": available_models,
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
-def get_gemini_models() -> list[str]:
-    primary_model = (
-        os.getenv("GEMINI_MODEL")
-        or getattr(settings, "GEMINI_MODEL", "")
-        or "gemini-1.5-flash"
-    )
+class TutorAIChatView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
 
-    fallback_models = [
-        primary_model,
-        "gemini-1.5-flash",
-        "gemini-1.5-flash-8b",
-        "gemini-1.5-pro",
-    ]
+    def post(self, request, *args: Any, **kwargs: Any) -> Response:
+        serializer = ChatSerializer(data=request.data)
 
-    unique_models: list[str] = []
+        if not serializer.is_valid():
+            return Response(
+                {
+                    "detail": "Invalid chat payload.",
+                    "errors": serializer.errors,
+                    "received": request.data,
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-    for model in fallback_models:
-        if model and model not in unique_models:
-            unique_models.append(model)
+        data = serializer.validated_data
 
-    return unique_models
+        payload = ChatInput(
+            message=data["message"],
+            subject=data.get("subject", "General"),
+            topic=data.get("topic", "General"),
+            student_class=data.get("student_class"),
+            learning_style=data.get("learning_style"),
+            interests=data.get("interests", []),
+        )
 
+        prompt = chat_prompt(
+            message=payload.message,
+            subject=payload.subject,
+            topic=payload.topic,
+            student_class=payload.student_class,
+            learning_style=payload.learning_style,
+            interests=payload.interests,
+        )
 
-def local_study_fallback(
-    message: str,
-    subject: str = "General",
-    topic: str = "General",
-    learning_profile: dict[str, Any] | None = None,
-) -> str:
-    profile = learning_profile or {}
-    learning_style = profile.get("learning_style", "simple")
-    interests = profile.get("interests", [])
+        result = gemini_client.generate_text(prompt)
 
-    interest_text = (
-        ", ".join(interests)
-        if isinstance(interests, list) and interests
-        else "real-life examples"
-    )
+        if result["ok"]:
+            answer = result["text"]
+            provider = "gemini"
+        else:
+            answer = self._fallback_chat(payload)
+            provider = "local"
 
-    return (
-        f"Gemini is temporarily overloaded, so NexaLearn is using local AI fallback.\n\n"
-        f"Subject: {subject}\n"
-        f"Topic: {topic}\n\n"
-        f"Your doubt: {message}\n\n"
-        f"Simple explanation:\n"
-        f"Break this topic into three parts: the definition, the main rule/formula, "
-        f"and one example. Since your learning style is '{learning_style}', connect "
-        f"the idea with {interest_text}.\n\n"
-        f"Quick recovery task:\n"
-        f"1. Write the definition of {topic} in one line.\n"
-        f"2. Write one example.\n"
-        f"3. Solve one similar question and compare it with the correct answer."
-    )
+        return Response(
+            {
+                "message": answer,
+                "reply": answer,
+                "answer": answer,
+                "provider": provider,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    def _fallback_chat(self, payload: ChatInput) -> str:
+        interest_line = ""
+
+        if payload.interests:
+            interest_line = (
+                f"\n\nInterest example: Think of it like {payload.interests[0]}. "
+                "First understand the rule, then apply it."
+            )
+
+        return (
+            f"Let's break it down.\n\n"
+            f"Subject: {payload.subject}\n"
+            f"Topic: {payload.topic}\n\n"
+            f"Simple explanation: First understand the core concept. Then connect it with the question. "
+            f"After that, apply the rule, formula, or logic step by step."
+            f"{interest_line}\n\n"
+            f"Practice task: Solve 3 easy questions and review your mistakes."
+        )
 
 
 class AnalyzeAnswerView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
-    def post(self, request):
-        service = AIAnalysisService()
-        result = service.analyze_answer(request.data)
-        return Response(result, status=status.HTTP_200_OK)
+    def post(self, request, *args: Any, **kwargs: Any) -> Response:
+        serializer = AnalyzeAnswerSerializer(data=request.data)
 
-
-class GenerateQuizView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-
-    def post(self, request):
-        service = AIAnalysisService()
-        result = service.generate_quiz(request.data)
-        return Response(result, status=status.HTTP_200_OK)
-
-
-class GeminiChatView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-
-    def post(self, request):
-        message = str(request.data.get("message", "")).strip()
-        subject = str(request.data.get("subject", "General")).strip() or "General"
-        topic = str(request.data.get("topic", "General")).strip() or "General"
-        learning_profile = request.data.get("learning_profile") or {}
-
-        if not message:
+        if not serializer.is_valid():
             return Response(
-                {"error": "Message is required."},
+                {
+                    "detail": "Invalid answer-analysis payload.",
+                    "errors": serializer.errors,
+                    "received": request.data,
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        api_key = get_gemini_api_key()
+        data = serializer.validated_data
 
-        if not api_key:
+        payload = AnswerAnalysisInput(
+            question_text=data["question_text"],
+            correct_answer=data["correct_answer"],
+            student_answer=data["student_answer"],
+            subject=data.get("subject", "General"),
+            topic=data.get("topic", "General"),
+            difficulty=data.get("difficulty", "medium"),
+            question_type=data.get("question_type", "short_answer"),
+            marks=data.get("marks", 1),
+            student_class=data.get("student_class"),
+            learning_style=data.get("learning_style"),
+            interests=data.get("interests", []),
+        )
+
+        result = local_learning_agent.analyze_answer(payload)
+
+        return Response(result.to_dict(), status=status.HTTP_200_OK)
+
+
+class AIPracticeGenerateView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, *args: Any, **kwargs: Any) -> Response:
+        serializer = GenerateQuizSerializer(data=request.data)
+
+        if not serializer.is_valid():
             return Response(
                 {
-                    "reply": local_study_fallback(
-                        message=message,
-                        subject=subject,
-                        topic=topic,
-                        learning_profile=learning_profile,
-                    ),
-                    "provider": "local_fallback",
-                    "warning": "Gemini API key is missing.",
+                    "detail": "Invalid quiz-generation payload.",
+                    "errors": serializer.errors,
+                    "received": request.data,
                 },
-                status=status.HTTP_200_OK,
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
-        genai.configure(api_key=api_key)
+        data = serializer.validated_data
 
-        system_prompt = f"""
-You are NexaLearn AI Tutor.
-
-Your role:
-- Explain academic doubts clearly.
-- Adapt explanation to the student's grade, learning style, and interests.
-- Keep answers short, useful, and practical.
-- Do not replace the teacher; support learning recovery.
-- Give one small practice task at the end.
-
-Subject: {subject}
-Topic: {topic}
-Learning profile: {learning_profile}
-
-Student question:
-{message}
-"""
-
-        last_error = ""
-
-        for model_name in get_gemini_models():
-            try:
-                model = genai.GenerativeModel(model_name)
-                response = model.generate_content(system_prompt)
-
-                reply = getattr(response, "text", "") or ""
-
-                if reply.strip():
-                    return Response(
-                        {
-                            "reply": reply.strip(),
-                            "provider": "gemini",
-                            "model": model_name,
-                        },
-                        status=status.HTTP_200_OK,
-                    )
-
-                last_error = f"{model_name} returned empty response."
-
-            except Exception as exc:
-                last_error = str(exc)
-
-                if "503" in last_error or "UNAVAILABLE" in last_error.upper():
-                    continue
-
-                if "429" in last_error or "quota" in last_error.lower():
-                    continue
-
-                continue
-
-        return Response(
-            {
-                "reply": local_study_fallback(
-                    message=message,
-                    subject=subject,
-                    topic=topic,
-                    learning_profile=learning_profile,
-                ),
-                "provider": "local_fallback",
-                "warning": "Gemini models were unavailable, so local fallback was used.",
-                "last_error": last_error,
-            },
-            status=status.HTTP_200_OK,
+        result = ai_practice_quiz_generator.generate_quiz(
+            subject=data["subject"],
+            topic=data["topic"],
+            student_class=data.get("student_class", "12"),
+            difficulty=data.get("difficulty", "Medium"),
+            total_questions=data.get("total_questions", 5),
+            marks_per_question=data.get("marks_per_question", 2),
+            interests=data.get("interests", []),
         )
+
+        return Response(result, status=status.HTTP_200_OK)
+
+
+class AIPracticeEvaluateView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, *args: Any, **kwargs: Any) -> Response:
+        serializer = EvaluatePracticeSerializer(data=request.data)
+
+        if not serializer.is_valid():
+            return Response(
+                {
+                    "detail": "Invalid quiz-evaluation payload.",
+                    "errors": serializer.errors,
+                    "received": request.data,
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        data = serializer.validated_data
+
+        result = ai_practice_evaluator.evaluate_batch(
+            questions=data["questions"],
+            answers=data["answers"],
+            subject=data.get("subject", "General"),
+            topic=data.get("topic", "General"),
+            student_class=data.get("student_class", "12"),
+            interests=data.get("interests", []),
+        )
+
+        return Response(result, status=status.HTTP_200_OK)

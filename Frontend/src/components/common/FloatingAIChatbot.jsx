@@ -1,309 +1,202 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  Bot,
-  ChevronDown,
-  MessageCircle,
-  Send,
-  Sparkles,
-  X,
-} from "lucide-react";
-import { sendGeminiChatMessage } from "../../services/aiService";
+import { Bot, Loader2, Send, Sparkles, X } from "lucide-react";
+import { sendTutorAIMessage } from "../../services/aiService";
 
-export function FloatingAIChatbot() {
-  const chatBodyRef = useRef(null);
-  const [open, setOpen] = useState(false);
+const starterPrompts = [
+  "Explain my weak concept simply",
+  "Give me 5 practice questions",
+  "Explain this using cricket",
+];
 
-  const [context, setContext] = useState({
-    class_level: "12",
-    subject: "Physics",
-    topic: "Electric Field",
-    student_interest: "cricket",
-    explanation_style: "exam_focused",
-  });
+const FloatingAIChatbot = ({ context = {} }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [message, setMessage] = useState("");
+  const [isSending, setIsSending] = useState(false);
+  const bottomRef = useRef(null);
 
-  const [message, setMessage] = useState(
-    "Explain electric field using cricket example.",
-  );
-
-  const [chat, setChat] = useState([
+  const [messages, setMessages] = useState([
     {
       role: "assistant",
       content:
-        "Hi, I am NexaLearn AI. Ask me any concept and I will explain it based on your class and interest.",
+        "Hi, I am Tutor AI. Ask me a doubt, or tell me a topic you want to understand.",
     },
   ]);
 
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  function updateContext(event) {
-    const { name, value } = event.target;
-    setContext((previous) => ({ ...previous, [name]: value }));
-  }
-
-  function scrollToBottom() {
-    if (!chatBodyRef.current) return;
-
-    chatBodyRef.current.scrollTo({
-      top: chatBodyRef.current.scrollHeight,
-      behavior: "smooth",
-    });
-  }
-
   useEffect(() => {
-    if (open) {
-      setTimeout(scrollToBottom, 80);
-    }
-  }, [chat, open]);
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, isSending]);
 
-  async function handleSend(event) {
-    event.preventDefault();
+  const handleSend = async (customMessage) => {
+    const finalMessage = String(customMessage || message).trim();
 
-    if (!message.trim()) return;
+    if (!finalMessage || isSending) return;
 
-    const currentMessage = message.trim();
+    const userMessage = {
+      role: "user",
+      content: finalMessage,
+    };
 
-    setChat((previous) => [
-      ...previous,
-      {
-        role: "user",
-        content: currentMessage,
-      },
-    ]);
-
+    setMessages((previous) => [...previous, userMessage]);
     setMessage("");
-    setLoading(true);
-    setError("");
+    setIsSending(true);
 
     try {
-      const data = await sendGeminiChatMessage({
-        ...context,
-        message: currentMessage,
+      const data = await sendTutorAIMessage({
+        message: finalMessage,
+        context: {
+          source: "floating_chatbot",
+          ...context,
+        },
       });
 
-      setChat((previous) => [
+      setMessages((previous) => [
         ...previous,
         {
           role: "assistant",
-          content: data.reply,
+          content: data.reply || "I could not generate a response.",
         },
       ]);
-    } catch (err) {
-      setError(
-        err?.response?.data?.detail ||
-          "AI chatbot failed. Check backend Gemini API setup.",
-      );
+    } catch (error) {
+      const backendError =
+        error?.response?.data?.detail ||
+        error?.response?.data?.error ||
+        "Please check backend server, login token, Gemini API key, and CORS.";
+
+      setMessages((previous) => [
+        ...previous,
+        {
+          role: "assistant",
+          content: `Tutor AI is unavailable right now. ${backendError}`,
+        },
+      ]);
     } finally {
-      setLoading(false);
+      setIsSending(false);
     }
-  }
+  };
 
   return (
     <>
-      {open && (
-        <section className="fixed bottom-20 right-4 z-50 flex h-[440px] w-[calc(100vw-2rem)] max-w-[320px] flex-col overflow-hidden rounded-[1.4rem] border border-slate-200 bg-white shadow-float sm:right-6">
-          <header className="bg-gradient-to-br from-slate-950 to-slate-800 px-4 py-3 text-white">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex min-w-0 items-center gap-3">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-blue-600">
-                  <Bot className="h-4 w-4" />
-                </div>
+      <button
+        type="button"
+        onClick={() => setIsOpen(true)}
+        className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-600 text-white shadow-xl shadow-indigo-600/30 transition hover:-translate-y-1 hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-300"
+        aria-label="Open Tutor AI"
+      >
+        <Bot className="h-6 w-6" />
+      </button>
 
-                <div className="min-w-0">
-                  <h2 className="truncate text-sm font-black">NexaLearn AI</h2>
-                  <p className="truncate text-[11px] text-slate-300">
-                    Study support assistant
-                  </p>
-                </div>
+      {isOpen && (
+        <section className="fixed bottom-24 right-4 z-50 flex h-[560px] w-[380px] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
+          <header className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-3">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-600 text-white shadow-sm">
+                <Bot className="h-5 w-5" />
               </div>
 
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white transition hover:bg-white/20"
-                aria-label="Close chatbot"
-              >
-                <X className="h-4 w-4" />
-              </button>
+              <div>
+                <h2 className="text-sm font-bold text-slate-900">Tutor AI</h2>
+                <p className="text-xs text-slate-500">
+                  Mistake-aware learning assistant
+                </p>
+              </div>
             </div>
+
+            <button
+              type="button"
+              onClick={() => setIsOpen(false)}
+              className="rounded-xl p-2 text-slate-500 transition hover:bg-slate-200 hover:text-slate-900"
+              aria-label="Close Tutor AI"
+            >
+              <X className="h-5 w-5" />
+            </button>
           </header>
 
-          <div className="border-b border-slate-200 bg-slate-50 px-3 py-2">
-            <details className="group">
-              <summary className="flex cursor-pointer list-none items-center justify-between rounded-2xl bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm">
-                <span className="flex items-center gap-2">
-                  <Sparkles className="h-3.5 w-3.5 text-blue-600" />
-                  Chat Context
-                </span>
-                <ChevronDown className="h-4 w-4 transition group-open:rotate-180" />
-              </summary>
-
-              <div className="mt-3 grid gap-2">
-                <div className="grid grid-cols-2 gap-2">
-                  <SmallInput
-                    label="Class"
-                    name="class_level"
-                    value={context.class_level}
-                    onChange={updateContext}
-                  />
-
-                  <SmallInput
-                    label="Subject"
-                    name="subject"
-                    value={context.subject}
-                    onChange={updateContext}
-                  />
-                </div>
-
-                <SmallInput
-                  label="Topic"
-                  name="topic"
-                  value={context.topic}
-                  onChange={updateContext}
-                />
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="mb-1 block text-[11px] font-bold text-slate-500">
-                      Interest
-                    </label>
-                    <select
-                      className="w-full rounded-xl border border-slate-200 bg-white px-2.5 py-2 text-xs font-bold text-slate-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                      name="student_interest"
-                      value={context.student_interest}
-                      onChange={updateContext}
-                    >
-                      <option value="anime">Anime</option>
-                      <option value="cricket">Cricket</option>
-                      <option value="gaming">Gaming</option>
-                      <option value="movies">Movies</option>
-                      <option value="real_life">Real Life</option>
-                      <option value="textbook">Textbook</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="mb-1 block text-[11px] font-bold text-slate-500">
-                      Style
-                    </label>
-                    <select
-                      className="w-full rounded-xl border border-slate-200 bg-white px-2.5 py-2 text-xs font-bold text-slate-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                      name="explanation_style"
-                      value={context.explanation_style}
-                      onChange={updateContext}
-                    >
-                      <option value="simple">Simple</option>
-                      <option value="exam_focused">Exam</option>
-                      <option value="step_by_step">Steps</option>
-                      <option value="story_based">Story</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-            </details>
+          <div className="border-b border-slate-100 bg-white px-4 py-3">
+            <div className="flex items-center gap-2 overflow-x-auto">
+              {starterPrompts.map((prompt) => (
+                <button
+                  key={prompt}
+                  type="button"
+                  onClick={() => handleSend(prompt)}
+                  className="shrink-0 rounded-full border border-indigo-100 bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-700 transition hover:bg-indigo-100"
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <div
-            ref={chatBodyRef}
-            className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-slate-50 px-3 py-4"
-          >
-            {chat.map((item, index) => (
+          <div className="flex-1 space-y-3 overflow-y-auto bg-white px-4 py-4">
+            {messages.map((item, index) => (
               <div
-                key={index}
-                className={[
-                  "flex",
-                  item.role === "user" ? "justify-end" : "justify-start",
-                ].join(" ")}
+                key={`${item.role}-${index}`}
+                className={`flex ${
+                  item.role === "user" ? "justify-end" : "justify-start"
+                }`}
               >
                 <div
-                  className={[
-                    "max-w-[86%] rounded-2xl px-3.5 py-2.5 text-xs leading-6",
+                  className={`max-w-[84%] rounded-2xl px-4 py-2 text-sm leading-6 ${
                     item.role === "user"
-                      ? "bg-gradient-to-br from-blue-600 to-indigo-600 text-white"
-                      : "bg-white text-slate-700 shadow-sm",
-                  ].join(" ")}
+                      ? "bg-indigo-600 text-white"
+                      : "bg-slate-100 text-slate-800"
+                  }`}
                 >
-                  <p className="whitespace-pre-line">{item.content}</p>
+                  {item.role === "assistant" && (
+                    <div className="mb-1 flex items-center gap-1 text-xs font-semibold text-indigo-600">
+                      <Sparkles className="h-3 w-3" />
+                      Tutor AI
+                    </div>
+                  )}
+                  <p className="whitespace-pre-wrap">{item.content}</p>
                 </div>
               </div>
             ))}
 
-            {loading && (
-              <div className="inline-flex rounded-2xl bg-white px-3.5 py-2.5 text-xs font-bold text-slate-500 shadow-sm">
-                AI is thinking...
+            {isSending && (
+              <div className="flex justify-start">
+                <div className="flex items-center gap-2 rounded-2xl bg-slate-100 px-4 py-2 text-sm text-slate-600">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Thinking...
+                </div>
               </div>
             )}
 
-            {error && (
-              <div className="rounded-2xl border border-rose-200 bg-rose-50 p-3 text-xs font-bold text-rose-700">
-                {error}
-              </div>
-            )}
+            <div ref={bottomRef} />
           </div>
 
-          <form
-            onSubmit={handleSend}
-            className="border-t border-slate-200 bg-white p-3"
-          >
-            <div className="flex items-end gap-2">
-              <textarea
-                className="max-h-20 min-h-10 flex-1 resize-none rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-semibold text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+          <footer className="border-t border-slate-200 bg-white p-3">
+            <div className="flex items-center gap-2">
+              <input
                 value={message}
                 onChange={(event) => setMessage(event.target.value)}
-                placeholder="Ask anything..."
                 onKeyDown={(event) => {
-                  if (event.key === "Enter" && !event.shiftKey) {
-                    event.preventDefault();
-                    handleSend(event);
+                  if (event.key === "Enter") {
+                    handleSend();
                   }
                 }}
+                placeholder="Ask your doubt..."
+                className="h-11 flex-1 rounded-2xl border border-slate-300 px-4 text-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
               />
 
               <button
-                type="submit"
-                disabled={loading}
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-600/20 transition hover:scale-105 disabled:opacity-60"
+                type="button"
+                onClick={() => handleSend()}
+                disabled={isSending || !message.trim()}
+                className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-600 text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-slate-300"
                 aria-label="Send message"
               >
-                <Send className="h-4 w-4" />
+                {isSending ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <Send className="h-5 w-5" />
+                )}
               </button>
             </div>
-          </form>
+          </footer>
         </section>
       )}
-
-      <button
-        type="button"
-        onClick={() => setOpen((value) => !value)}
-        className="fixed bottom-5 right-4 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-2xl shadow-blue-600/30 transition hover:-translate-y-1 hover:shadow-blue-600/40 sm:right-6"
-        aria-label="Open AI chatbot"
-      >
-        {open ? (
-          <X className="h-5 w-5" />
-        ) : (
-          <MessageCircle className="h-5 w-5" />
-        )}
-
-        {!open && (
-          <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 text-[8px] font-black text-white ring-2 ring-white">
-            AI
-          </span>
-        )}
-      </button>
     </>
   );
-}
+};
 
-function SmallInput({ label, ...props }) {
-  return (
-    <div>
-      <label className="mb-1 block text-[11px] font-bold text-slate-500">
-        {label}
-      </label>
-      <input
-        className="w-full rounded-xl border border-slate-200 bg-white px-2.5 py-2 text-xs font-bold text-slate-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-        {...props}
-      />
-    </div>
-  );
-}
+export default FloatingAIChatbot;

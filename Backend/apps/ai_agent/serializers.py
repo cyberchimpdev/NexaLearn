@@ -4,34 +4,42 @@ from rest_framework import serializers
 
 
 class AnalyzeAnswerSerializer(serializers.Serializer):
-    class_level = serializers.CharField()
-    subject = serializers.CharField()
-    topic = serializers.CharField()
-    question = serializers.CharField()
+    question_text = serializers.CharField()
     correct_answer = serializers.CharField()
     student_answer = serializers.CharField(allow_blank=True)
-    marks = serializers.IntegerField(min_value=1)
-    student_interest = serializers.CharField(default="real_life")
-    explanation_style = serializers.CharField(default="step_by_step")
+    subject = serializers.CharField(required=False, default="General")
+    topic = serializers.CharField(required=False, default="General")
+    difficulty = serializers.CharField(required=False, default="medium")
+    question_type = serializers.CharField(required=False, default="short_answer")
+    marks = serializers.IntegerField(required=False, default=1, min_value=1)
+    student_class = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    learning_style = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    interests = serializers.ListField(child=serializers.CharField(), required=False, default=list)
 
 
-class ChatMessageSerializer(serializers.Serializer):
+class ChatSerializer(serializers.Serializer):
     message = serializers.CharField()
-    class_level = serializers.CharField(default="12")
-    subject = serializers.CharField(default="General")
-    topic = serializers.CharField(default="")
-    student_interest = serializers.CharField(default="real_life")
-    explanation_style = serializers.CharField(default="simple")
+    subject = serializers.CharField(required=False, default="General")
+    topic = serializers.CharField(required=False, default="General")
+    student_class = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    learning_style = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    interests = serializers.ListField(child=serializers.CharField(), required=False, default=list)
 
 
 class GenerateQuizSerializer(serializers.Serializer):
     subject = serializers.CharField()
     topic = serializers.CharField()
-    class_level = serializers.CharField()
-    difficulty = serializers.ChoiceField(
-        choices=["easy", "medium", "hard"],
-        default="medium",
-    )
-    question_count = serializers.IntegerField(min_value=1, max_value=20, default=5)
-    marks_per_question = serializers.IntegerField(min_value=1, max_value=10, default=2)
-    publish = serializers.BooleanField(default=False)
+    student_class = serializers.CharField(required=False, default="12")
+    difficulty = serializers.CharField(required=False, default="Medium")
+    total_questions = serializers.IntegerField(required=False, default=5, min_value=1, max_value=20)
+    marks_per_question = serializers.IntegerField(required=False, default=2, min_value=1, max_value=10)
+    interests = serializers.ListField(child=serializers.CharField(), required=False, default=list)
+
+
+class EvaluatePracticeSerializer(serializers.Serializer):
+    questions = serializers.ListField(child=serializers.DictField(), required=True)
+    answers = serializers.JSONField(required=True)
+    subject = serializers.CharField(required=False, default="General")
+    topic = serializers.CharField(required=False, default="General")
+    student_class = serializers.CharField(required=False, default="12")
+    interests = serializers.ListField(child=serializers.CharField(), required=False, default=list)

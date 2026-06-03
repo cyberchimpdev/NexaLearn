@@ -1,246 +1,267 @@
+# apps/reports/services.py
+
 from __future__ import annotations
 
 from collections import Counter, defaultdict
+from typing import Any
 
-from apps.attempts.models import AnswerAttempt, Attempt
-from apps.tests_app.models import Test
+from django.db.models import Avg, Count, QuerySet
 
-from .models import ClassReportSnapshot, RemedialGroup
+from apps.attempts.models import Attempt, AttemptAnswer, Mistake
 
 
 class ReportService:
+    """
+    Report service for NexaLearn.
+
+    Generates:
+    - student attempt history
+    - weak concept summary
+    - mistake type summary
+    - teacher test report
+    - remedial groups
+    """
+
     @staticmethod
-    def generate_teacher_action(mistake_type: str, weak_concept: str) -> str:
-        if not mistake_type or mistake_type == "No mistake":
-            return "Most students performed well. Give 2 advanced practice questions."
-
-        if mistake_type == "Formula mistake":
-            return (
-                f"Revise the formula related to {weak_concept}. "
-                "Show one solved example, then give 3 similar numerical questions."
-            )
-
-        if mistake_type == "Calculation mistake":
-            return (
-                f"Give calculation practice for {weak_concept}. "
-                "Ask students to write every substitution step and final unit."
-            )
-
-        if mistake_type == "Unit mistake":
-            return (
-                f"Create a quick unit revision table for {weak_concept}. "
-                "Then give 3 unit-conversion or final-answer questions."
-            )
-
-        if mistake_type == "Conceptual mistake":
-            return (
-                f"Reteach the core idea of {weak_concept} using a real-life, cricket, "
-                "anime, or gaming example based on student interests."
-            )
-
-        if mistake_type == "Incomplete answer":
-            return (
-                f"Show students how to write a complete answer for {weak_concept}: "
-                "definition, formula/concept, example, and final conclusion."
-            )
-
-        return (
-            f"Create a short remedial activity for {weak_concept} and ask students "
-            "to explain the concept in their own words."
-        )
-
-    @classmethod
-    def build_class_report(cls, test: Test) -> dict:
+    def get_student_report(student) -> dict[str, Any]:
         attempts = (
-            Attempt.objects.select_related("student", "test")
-            .filter(test=test)
-            .order_by("-submitted_at")
+            Attempt.objects.select_related("test", "student")
+            .prefetch_related("mistakes", "answers")
+            .filter(student=student)
+            .order_by("-created_at")
         )
 
         total_attempts = attempts.count()
 
-        average_score = (
-            round(sum(attempt.total_score for attempt in attempts) / total_attempts, 2)
-            if total_attempts
-            else 0
-        )
-
         average_percentage = (
-            round(sum(attempt.percentage for attempt in attempts) / total_attempts, 2)
-            if total_attempts
-            else 0
+            attempts.aggregate(avg_percentage=Avg("percentage"))["avg_percentage"] or 0
         )
 
-        answers = (
-            AnswerAttempt.objects.select_related(
-                "attempt",
-                "attempt__student",
-                "question",
-            )
-            .filter(attempt__test=test)
+        weak_concepts = (
+            Mistake.objects.filter(attempt__student=student)
+            .values("weak_concept")
+            .annotate(count=Count("id"))
+            .order_by("-count")
         )
 
-        weak_counter: Counter[str] = Counter()
-        mistake_counter: Counter[str] = Counter()
-
-        for answer in answers:
-            if answer.mistake_type != "No mistake":
-                weak_counter[answer.weak_concept] += 1
-                mistake_counter[answer.mistake_type] += 1
-
-        most_common_weak_concept = (
-            weak_counter.most_common(1)[0][0] if weak_counter else ""
-        )
-        most_common_mistake_type = (
-            mistake_counter.most_common(1)[0][0] if mistake_counter else ""
+        mistake_types = (
+            Mistake.objects.filter(attempt__student=student)
+            .values("mistake_type")
+            .annotate(count=Count("id"))
+            .order_by("-count")
         )
 
-        suggested_action = cls.generate_teacher_action(
-            most_common_mistake_type,
-            most_common_weak_concept,
-        )
-
-        snapshot, _ = ClassReportSnapshot.objects.update_or_create(
-            test=test,
-            defaults={
-                "total_attempts": total_attempts,
-                "average_score": average_score,
-                "average_percentage": average_percentage,
-                "most_common_weak_concept": most_common_weak_concept,
-                "most_common_mistake_type": most_common_mistake_type,
-                "suggested_teacher_action": suggested_action,
-            },
-        )
-
-        student_results = [
+        recent_attempts = [
             {
-                "attempt_id": attempt.id,
-                "student_id": attempt.student.id,
-                "student_name": attempt.student.full_name,
-                "student_email": attempt.student.email,
-                "score": attempt.total_score,
+                "id": attempt.id,
+                "test_id": attempt.test_id,
+                "test_title": attempt.test.title,
+                "obtained_marks": attempt.obtained_marks,
                 "total_marks": attempt.total_marks,
                 "percentage": attempt.percentage,
-                "submitted_at": attempt.submitted_at,
+                "created_at": attempt.created_at,
+            }
+            for attempt in attempts[:10]
+        ]
+
+        return {
+            "total_attempts": total_attempts,
+            "average_percentage": round(float(average_percentage), 2),
+            "weak_concepts": list(weak_concepts),
+            "mistake_types": list(mistake_types),
+            "recent_attempts": recent_attempts,
+        }
+
+    @staticmethod
+    def get_test_report(test, teacher=None) -> dict[str, Any]:
+        attempts = (
+            Attempt.objects.select_related("student", "test")
+            .prefetch_related("mistakes", "answers")
+            .filter(test=test)
+            .order_by("-created_at")
+        )
+
+        if teacher is not None:
+            created_by = getattr(test, "created_by", None)
+            if created_by is not None and created_by != teacher:
+                return {
+                    "detail": "You do not have permission to view this report.",
+                    "allowed": False,
+                }
+
+        total_attempts = attempts.count()
+
+        average_percentage = (
+            attempts.aggregate(avg_percentage=Avg("percentage"))["avg_percentage"] or 0
+        )
+
+        student_rows = [
+            {
+                "attempt_id": attempt.id,
+                "student_id": attempt.student_id,
+                "student_name": ReportService._get_user_display_name(attempt.student),
+                "student_email": getattr(attempt.student, "email", ""),
+                "obtained_marks": attempt.obtained_marks,
+                "total_marks": attempt.total_marks,
+                "percentage": attempt.percentage,
+                "created_at": attempt.created_at,
             }
             for attempt in attempts
         ]
 
+        weak_concepts = (
+            Mistake.objects.filter(attempt__test=test)
+            .values("weak_concept")
+            .annotate(count=Count("id"))
+            .order_by("-count")
+        )
+
+        mistake_types = (
+            Mistake.objects.filter(attempt__test=test)
+            .values("mistake_type")
+            .annotate(count=Count("id"))
+            .order_by("-count")
+        )
+
+        remedial_groups = ReportService.get_remedial_groups_for_test(test)
+
         return {
-            "snapshot": snapshot,
-            "student_results": student_results,
+            "allowed": True,
+            "test_id": test.id,
+            "test_title": test.title,
+            "total_attempts": total_attempts,
+            "average_percentage": round(float(average_percentage), 2),
+            "students": student_rows,
+            "weak_concepts": list(weak_concepts),
+            "mistake_types": list(mistake_types),
+            "remedial_groups": remedial_groups,
         }
 
-    @classmethod
-    def build_weakness_heatmap(cls, test: Test) -> dict:
-        answers = (
-            AnswerAttempt.objects.select_related(
+    @staticmethod
+    def get_remedial_groups_for_test(test) -> list[dict[str, Any]]:
+        mistakes = (
+            Mistake.objects.select_related(
                 "attempt",
                 "attempt__student",
                 "question",
             )
             .filter(attempt__test=test)
+            .order_by("weak_concept")
         )
 
-        weak_counter: Counter[str] = Counter()
-        mistake_counter: Counter[str] = Counter()
-        question_counter: Counter[str] = Counter()
+        grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
 
-        for answer in answers:
-            if answer.mistake_type == "No mistake":
-                continue
+        for mistake in mistakes:
+            weak_concept = mistake.weak_concept or "Uncategorized"
 
-            weak_counter[answer.weak_concept] += 1
-            mistake_counter[answer.mistake_type] += 1
-            question_counter[f"Q{answer.question.order}: {answer.question.question_text}"] += 1
-
-        return {
-            "weak_topics": [
-                {"weak_concept": key, "count": value}
-                for key, value in weak_counter.most_common()
-            ],
-            "mistake_types": [
-                {"mistake_type": key, "count": value}
-                for key, value in mistake_counter.most_common()
-            ],
-            "question_difficulty": [
-                {"question": key, "wrong_count": value}
-                for key, value in question_counter.most_common()
-            ],
-        }
-
-    @classmethod
-    def build_remedial_groups(cls, test: Test) -> list[dict]:
-        answers = (
-            AnswerAttempt.objects.select_related(
-                "attempt",
-                "attempt__student",
-                "question",
-            )
-            .filter(attempt__test=test)
-            .order_by("question__order")
-        )
-
-        grouped: defaultdict[str, list[AnswerAttempt]] = defaultdict(list)
-
-        for answer in answers:
-            if answer.mistake_type == "No mistake":
-                continue
-
-            key = f"{answer.mistake_type}|{answer.weak_concept}"
-            grouped[key].append(answer)
-
-        RemedialGroup.objects.filter(test=test).delete()
-
-        formatted_groups: list[dict] = []
-
-        for key, grouped_answers in grouped.items():
-            mistake_type, weak_concept = key.split("|", 1)
-
-            group_name = f"{mistake_type} in {weak_concept}"
-            suggested_action = cls.generate_teacher_action(mistake_type, weak_concept)
-
-            group = RemedialGroup.objects.create(
-                test=test,
-                group_name=group_name,
-                mistake_type=mistake_type,
-                weak_concept=weak_concept,
-                suggested_action=suggested_action,
-                student_count=len(grouped_answers),
-            )
-
-            students = []
-            seen_students = set()
-
-            for answer in grouped_answers:
-                student_key = answer.attempt.student_id
-
-                if student_key in seen_students:
-                    continue
-
-                seen_students.add(student_key)
-
-                students.append(
-                    {
-                        "student_id": answer.attempt.student.id,
-                        "student_name": answer.attempt.student.full_name,
-                        "student_email": answer.attempt.student.email,
-                        "question_text": answer.question.question_text,
-                        "student_answer": answer.student_answer,
-                        "revision_task": answer.revision_task,
-                    }
-                )
-
-            formatted_groups.append(
+            grouped[weak_concept].append(
                 {
-                    "id": group.id,
-                    "group_name": group.group_name,
-                    "mistake_type": group.mistake_type,
-                    "weak_concept": group.weak_concept,
-                    "suggested_action": group.suggested_action,
-                    "student_count": len(students),
-                    "students": students,
+                    "student_id": mistake.attempt.student_id,
+                    "student_name": ReportService._get_user_display_name(
+                        mistake.attempt.student
+                    ),
+                    "student_email": getattr(mistake.attempt.student, "email", ""),
+                    "mistake_type": mistake.mistake_type,
+                    "question": getattr(mistake.question, "text", ""),
+                    "revision_task": mistake.revision_task,
                 }
             )
 
-        return formatted_groups
+        return [
+            {
+                "weak_concept": weak_concept,
+                "student_count": len({item["student_id"] for item in students}),
+                "students": students,
+            }
+            for weak_concept, students in grouped.items()
+        ]
+
+    @staticmethod
+    def get_class_performance_for_teacher(teacher) -> dict[str, Any]:
+        attempts = (
+            Attempt.objects.select_related("test", "student")
+            .filter(test__created_by=teacher)
+            .order_by("-created_at")
+        )
+
+        total_attempts = attempts.count()
+
+        average_percentage = (
+            attempts.aggregate(avg_percentage=Avg("percentage"))["avg_percentage"] or 0
+        )
+
+        tests_summary = (
+            attempts.values("test_id", "test__title")
+            .annotate(
+                attempt_count=Count("id"),
+                average_percentage=Avg("percentage"),
+            )
+            .order_by("-attempt_count")
+        )
+
+        return {
+            "total_attempts": total_attempts,
+            "average_percentage": round(float(average_percentage), 2),
+            "tests": [
+                {
+                    "test_id": row["test_id"],
+                    "test_title": row["test__title"],
+                    "attempt_count": row["attempt_count"],
+                    "average_percentage": round(
+                        float(row["average_percentage"] or 0),
+                        2,
+                    ),
+                }
+                for row in tests_summary
+            ],
+        }
+
+    @staticmethod
+    def get_student_mistake_cards(student) -> list[dict[str, Any]]:
+        mistakes = (
+            Mistake.objects.select_related(
+                "attempt",
+                "attempt__test",
+                "question",
+                "attempt_answer",
+            )
+            .filter(attempt__student=student)
+            .order_by("-created_at")
+        )
+
+        return [
+            {
+                "id": mistake.id,
+                "test_id": mistake.attempt.test_id,
+                "test_title": mistake.attempt.test.title,
+                "question": getattr(mistake.question, "text", ""),
+                "student_answer": getattr(mistake.attempt_answer, "student_answer", ""),
+                "correct_answer": getattr(mistake.question, "correct_answer", ""),
+                "weak_concept": mistake.weak_concept,
+                "mistake_type": mistake.mistake_type,
+                "explanation": mistake.explanation,
+                "personalized_explanation": mistake.personalized_explanation,
+                "revision_task": mistake.revision_task,
+                "created_at": mistake.created_at,
+            }
+            for mistake in mistakes
+        ]
+
+    @staticmethod
+    def _get_user_display_name(user) -> str:
+        full_name = ""
+
+        if hasattr(user, "get_full_name"):
+            full_name = user.get_full_name()
+
+        if full_name:
+            return full_name
+
+        username = getattr(user, "username", "")
+
+        if username:
+            return username
+
+        email = getattr(user, "email", "")
+
+        return email or "Unknown Student"

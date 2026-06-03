@@ -11,7 +11,7 @@ import TakeTest from "./pages/student/TakeTest";
 import StudentReports from "./pages/student/StudentReports";
 import AttemptMistakes from "./pages/student/AttemptMistakes";
 import StudentAI from "./pages/student/StudentAI";
-
+import AIPracticeTest from "./pages/student/AIPracticeTest";
 import TeacherDashboard from "./pages/teacher/TeacherDashboard";
 import CreateTest from "./pages/teacher/CreateTest";
 import TestReport from "./pages/teacher/TestReport";
@@ -40,6 +40,8 @@ function App() {
       <Route path="/teacher" element={<TeacherDashboard />} />
       <Route path="/teacher/tests/create" element={<CreateTest />} />
       <Route path="/teacher/tests/:testId/report" element={<TestReport />} />
+
+      <Route path="/student/ai-practice" element={<AIPracticeTest />} />
 
       <Route path="/dashboard" element={<Navigate to="/student" replace />} />
       <Route path="*" element={<NotFound />} />
