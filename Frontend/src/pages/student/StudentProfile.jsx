@@ -1,219 +1,410 @@
 import { useEffect, useState } from "react";
-import { Save, Sparkles } from "lucide-react";
-import { DashboardLayout } from "../../layouts/DashboardLayout";
 import {
-  getPersonalizationOptions,
-  getStudentProfile,
-  updateStudentProfile,
-} from "../../services/personalizationService";
+  AlertCircle,
+  Brain,
+  CheckCircle2,
+  Flame,
+  GraduationCap,
+  Loader2,
+  Save,
+  Sparkles,
+  Target,
+  User,
+} from "lucide-react";
 
-export function StudentProfile() {
-  const [options, setOptions] = useState({
-    interests: [],
-    explanation_styles: [],
-    class_levels: [],
+import DashboardLayout from "../../layouts/DashboardLayout";
+import api from "../../services/api";
+
+function StudentProfile() {
+  const [formData, setFormData] = useState({
+    grade_level: "",
+    learning_style: "simple",
+    interestsText: "",
+    preferredSubjectsText: "",
+    weakSubjectsText: "",
+    daily_goal_minutes: 30,
+    preferred_explanation_length: "medium",
   });
 
-  const [form, setForm] = useState({
-    class_level: "12",
-    primary_interest: "cricket",
-    explanation_style: "exam_focused",
-    learning_goal: "Prepare for NEB board exam with personalized revision.",
+  const [profileStats, setProfileStats] = useState({
+    current_streak: 0,
+    longest_streak: 0,
+    last_active_date: null,
   });
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-  function updateField(event) {
-    const { name, value } = event.target;
-    setForm((previous) => ({ ...previous, [name]: value }));
-  }
+  useEffect(() => {
+    fetchProfile();
+  }, []);
 
-  async function loadProfile() {
-    setLoading(true);
-    setError("");
+  const listToText = (value) => {
+    if (Array.isArray(value)) {
+      return value.join(", ");
+    }
 
+    if (typeof value === "string") {
+      return value;
+    }
+
+    return "";
+  };
+
+  const textToList = (value) => {
+    return value
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  };
+
+  const fetchProfile = async () => {
     try {
-      const [optionsData, profileData] = await Promise.all([
-        getPersonalizationOptions(),
-        getStudentProfile(),
-      ]);
+      setLoading(true);
+      setError("");
 
-      setOptions(optionsData);
-      setForm({
-        class_level: profileData.class_level || "12",
-        primary_interest: profileData.primary_interest || "cricket",
-        explanation_style: profileData.explanation_style || "exam_focused",
-        learning_goal:
-          profileData.learning_goal ||
-          "Improve weak concepts through personalized revision.",
+      const response = await api.get("/personalization/profile/");
+
+      const profile = response.data || {};
+
+      setFormData({
+        grade_level: profile.grade_level || "",
+        learning_style: profile.learning_style || "simple",
+        interestsText: listToText(profile.interests),
+        preferredSubjectsText: listToText(profile.preferred_subjects),
+        weakSubjectsText: listToText(profile.weak_subjects),
+        daily_goal_minutes: profile.daily_goal_minutes || 30,
+        preferred_explanation_length:
+          profile.preferred_explanation_length || "medium",
+      });
+
+      setProfileStats({
+        current_streak: profile.current_streak || 0,
+        longest_streak: profile.longest_streak || 0,
+        last_active_date: profile.last_active_date || null,
       });
     } catch (err) {
       setError(
         err?.response?.data?.detail ||
-          "Failed to load learning profile. Check login and backend.",
+          err?.response?.data?.error ||
+          "Could not load your learning profile. You can still fill and save it.",
       );
     } finally {
       setLoading(false);
     }
-  }
+  };
 
-  async function handleSubmit(event) {
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+
+    setFormData((previous) => ({
+      ...previous,
+      [name]: name === "daily_goal_minutes" ? Number(value) : value,
+    }));
+
+    setSuccess("");
+  };
+
+  const handleSubmit = async (event) => {
     event.preventDefault();
+
+    if (!formData.grade_level.trim()) {
+      setError("Grade level is required.");
+      return;
+    }
+
     setSaving(true);
-    setMessage("");
     setError("");
+    setSuccess("");
+
+    const payload = {
+      grade_level: formData.grade_level.trim(),
+      learning_style: formData.learning_style,
+      interests: textToList(formData.interestsText),
+      preferred_subjects: textToList(formData.preferredSubjectsText),
+      weak_subjects: textToList(formData.weakSubjectsText),
+      daily_goal_minutes: Number(formData.daily_goal_minutes) || 30,
+      preferred_explanation_length: formData.preferred_explanation_length,
+    };
 
     try {
-      await updateStudentProfile(form);
-      setMessage("Learning profile updated successfully.");
+      const response = await api.patch("/personalization/profile/", payload);
+
+      const updatedProfile = response.data || {};
+
+      setProfileStats({
+        current_streak:
+          updatedProfile.current_streak || profileStats.current_streak,
+        longest_streak:
+          updatedProfile.longest_streak || profileStats.longest_streak,
+        last_active_date:
+          updatedProfile.last_active_date || profileStats.last_active_date,
+      });
+
+      setSuccess("Learning profile updated successfully.");
     } catch (err) {
       setError(
-        err?.response?.data?.detail || "Failed to update learning profile.",
+        err?.response?.data?.detail ||
+          err?.response?.data?.error ||
+          "Could not save your profile. Check backend personalization API.",
       );
     } finally {
       setSaving(false);
     }
-  }
+  };
 
-  useEffect(() => {
-    loadProfile();
-  }, []);
-
-  return (
-    <DashboardLayout title="Learning Profile">
-      <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-        <section className="glass-card p-6">
-          <div className="mb-6">
-            <span className="badge">
-              <Sparkles className="mr-2 h-4 w-4" />
-              Personalization
-            </span>
-            <h2 className="mt-4 text-2xl font-black text-slate-950">
-              Tell NexaLearn how you learn best.
-            </h2>
-            <p className="mt-2 text-sm leading-7 text-slate-600">
-              The AI Agent uses this profile to explain weak concepts through
-              your preferred context.
+  if (loading) {
+    return (
+      <DashboardLayout role="student">
+        <main className="flex min-h-screen items-center justify-center bg-slate-50">
+          <div className="flex items-center gap-3 rounded-3xl border border-slate-200 bg-white px-6 py-5 shadow-sm">
+            <Loader2 className="h-5 w-5 animate-spin text-indigo-600" />
+            <p className="text-sm font-semibold text-slate-700">
+              Loading learning profile...
             </p>
           </div>
+        </main>
+      </DashboardLayout>
+    );
+  }
 
-          {loading ? (
-            <div className="rounded-3xl bg-white p-6 text-sm font-bold text-slate-500">
-              Loading profile...
+  return (
+    <DashboardLayout role="student">
+      <main className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-6xl space-y-6">
+          <section className="overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-blue-600 to-slate-900 p-6 text-white shadow-sm sm:p-8">
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold ring-1 ring-white/20">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Personalized Learning Profile
+                </div>
+
+                <h1 className="mt-5 text-2xl font-bold tracking-tight sm:text-4xl">
+                  Tell NexaLearn how you learn best.
+                </h1>
+
+                <p className="mt-4 max-w-2xl text-sm leading-7 text-indigo-50 sm:text-base">
+                  Your AI explanations, mistake reviews, and revision tasks will
+                  adapt based on your class, interests, weak subjects, and
+                  learning style.
+                </p>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-3 lg:min-w-[420px]">
+                <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/20">
+                  <Flame className="h-5 w-5 text-orange-200" />
+                  <p className="mt-3 text-xs text-indigo-100">Current Streak</p>
+                  <p className="text-2xl font-bold">
+                    {profileStats.current_streak}
+                  </p>
+                </div>
+
+                <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/20">
+                  <Target className="h-5 w-5 text-emerald-200" />
+                  <p className="mt-3 text-xs text-indigo-100">Longest Streak</p>
+                  <p className="text-2xl font-bold">
+                    {profileStats.longest_streak}
+                  </p>
+                </div>
+
+                <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/20">
+                  <Brain className="h-5 w-5 text-blue-200" />
+                  <p className="mt-3 text-xs text-indigo-100">AI Mode</p>
+                  <p className="text-2xl font-bold">On</p>
+                </div>
+              </div>
             </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-5">
-              {error && (
-                <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700">
-                  {error}
+          </section>
+
+          {error && (
+            <div className="flex items-start gap-3 rounded-3xl border border-red-200 bg-red-50 p-5 text-sm text-red-700">
+              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+              <p>{error}</p>
+            </div>
+          )}
+
+          {success && (
+            <div className="flex items-start gap-3 rounded-3xl border border-emerald-200 bg-emerald-50 p-5 text-sm text-emerald-700">
+              <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />
+              <p>{success}</p>
+            </div>
+          )}
+
+          <form
+            onSubmit={handleSubmit}
+            className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6"
+          >
+            <div className="flex items-start gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-indigo-600 text-white">
+                <User className="h-5 w-5" />
+              </div>
+
+              <div>
+                <h2 className="text-lg font-bold text-slate-950">
+                  Learning Details
+                </h2>
+                <p className="mt-1 text-sm leading-6 text-slate-600">
+                  Use commas for multiple interests or subjects.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 grid gap-5 md:grid-cols-2">
+              <div>
+                <label
+                  htmlFor="grade_level"
+                  className="text-sm font-semibold text-slate-700"
+                >
+                  Grade / Class
+                </label>
+                <div className="relative mt-2">
+                  <GraduationCap className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <input
+                    id="grade_level"
+                    name="grade_level"
+                    value={formData.grade_level}
+                    onChange={handleChange}
+                    placeholder="e.g. Class 12, SEE, SAT"
+                    className="h-12 w-full rounded-2xl border border-slate-200 bg-white pl-11 pr-4 text-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
+                  />
                 </div>
-              )}
-
-              {message && (
-                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-bold text-emerald-700">
-                  {message}
-                </div>
-              )}
+              </div>
 
               <div>
-                <label className="label-text">Class Level</label>
-                <select
-                  className="input-field"
-                  name="class_level"
-                  value={form.class_level}
-                  onChange={updateField}
+                <label
+                  htmlFor="learning_style"
+                  className="text-sm font-semibold text-slate-700"
                 >
-                  {options.class_levels.map((level) => (
-                    <option key={level} value={level}>
-                      {level}
-                    </option>
-                  ))}
+                  Learning Style
+                </label>
+                <select
+                  id="learning_style"
+                  name="learning_style"
+                  value={formData.learning_style}
+                  onChange={handleChange}
+                  className="mt-2 h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
+                >
+                  <option value="simple">Simple Explanation</option>
+                  <option value="visual">Visual Learning</option>
+                  <option value="story">Story Based</option>
+                  <option value="example">Example Based</option>
+                  <option value="practice">Practice Based</option>
                 </select>
               </div>
 
               <div>
-                <label className="label-text">Primary Interest</label>
-                <select
-                  className="input-field"
-                  name="primary_interest"
-                  value={form.primary_interest}
-                  onChange={updateField}
+                <label
+                  htmlFor="interestsText"
+                  className="text-sm font-semibold text-slate-700"
                 >
-                  {options.interests.map((interest) => (
-                    <option key={interest.value} value={interest.value}>
-                      {interest.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="label-text">Explanation Style</label>
-                <select
-                  className="input-field"
-                  name="explanation_style"
-                  value={form.explanation_style}
-                  onChange={updateField}
-                >
-                  {options.explanation_styles.map((style) => (
-                    <option key={style.value} value={style.value}>
-                      {style.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="label-text">Learning Goal</label>
-                <textarea
-                  className="input-field min-h-28 resize-y"
-                  name="learning_goal"
-                  value={form.learning_goal}
-                  onChange={updateField}
+                  Interests
+                </label>
+                <input
+                  id="interestsText"
+                  name="interestsText"
+                  value={formData.interestsText}
+                  onChange={handleChange}
+                  placeholder="e.g. cricket, anime, gaming"
+                  className="mt-2 h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
                 />
               </div>
 
-              <button disabled={saving} className="btn-primary w-full">
-                <Save className="mr-2 h-4 w-4" />
-                {saving ? "Saving..." : "Save Learning Profile"}
-              </button>
-            </form>
-          )}
-        </section>
-
-        <section className="glass-card p-6">
-          <h3 className="text-xl font-black text-slate-950">
-            How this improves your feedback
-          </h3>
-
-          <div className="mt-5 space-y-4">
-            {[
-              {
-                title: "Class-wise explanation",
-                text: "Class 12 students get formula, steps, units, and exam-focused explanation.",
-              },
-              {
-                title: "Interest-based examples",
-                text: "If you choose cricket, weak topics are explained using cricket strategies and match logic.",
-              },
-              {
-                title: "Recovery task",
-                text: "Instead of revising everything, you get targeted revision based on your mistake.",
-              },
-            ].map((item) => (
-              <div key={item.title} className="rounded-3xl bg-white p-5">
-                <h4 className="font-black text-slate-950">{item.title}</h4>
-                <p className="mt-2 text-sm leading-7 text-slate-600">
-                  {item.text}
-                </p>
+              <div>
+                <label
+                  htmlFor="preferredSubjectsText"
+                  className="text-sm font-semibold text-slate-700"
+                >
+                  Preferred Subjects
+                </label>
+                <input
+                  id="preferredSubjectsText"
+                  name="preferredSubjectsText"
+                  value={formData.preferredSubjectsText}
+                  onChange={handleChange}
+                  placeholder="e.g. Biology, Physics"
+                  className="mt-2 h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
+                />
               </div>
-            ))}
-          </div>
-        </section>
-      </div>
+
+              <div>
+                <label
+                  htmlFor="weakSubjectsText"
+                  className="text-sm font-semibold text-slate-700"
+                >
+                  Weak Subjects
+                </label>
+                <input
+                  id="weakSubjectsText"
+                  name="weakSubjectsText"
+                  value={formData.weakSubjectsText}
+                  onChange={handleChange}
+                  placeholder="e.g. Chemistry, Math"
+                  className="mt-2 h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="daily_goal_minutes"
+                  className="text-sm font-semibold text-slate-700"
+                >
+                  Daily Goal Minutes
+                </label>
+                <input
+                  id="daily_goal_minutes"
+                  name="daily_goal_minutes"
+                  type="number"
+                  min="5"
+                  max="600"
+                  value={formData.daily_goal_minutes}
+                  onChange={handleChange}
+                  className="mt-2 h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="preferred_explanation_length"
+                  className="text-sm font-semibold text-slate-700"
+                >
+                  Explanation Length
+                </label>
+                <select
+                  id="preferred_explanation_length"
+                  name="preferred_explanation_length"
+                  value={formData.preferred_explanation_length}
+                  onChange={handleChange}
+                  className="mt-2 h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
+                >
+                  <option value="short">Short</option>
+                  <option value="medium">Medium</option>
+                  <option value="detailed">Detailed</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <button
+                type="submit"
+                disabled={saving}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-6 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {saving ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+                {saving ? "Saving..." : "Save Profile"}
+              </button>
+            </div>
+          </form>
+        </div>
+      </main>
     </DashboardLayout>
   );
 }
+
+export default StudentProfile;

@@ -1,28 +1,31 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 
 @dataclass(frozen=True)
 class AnswerAnalysisInput:
-    class_level: str
-    subject: str
-    topic: str
-    question: str
+    question_text: str
     correct_answer: str
     student_answer: str
-    marks: int
-    student_interest: str = "real_life"
-    explanation_style: str = "step_by_step"
+    subject: str = "General"
+    topic: str = "General"
+    grade_level: str = "General"
+    learning_style: str = "simple"
+    interests: list[str] | None = None
 
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "AnswerAnalysisInput":
+        interests = data.get("interests")
 
-@dataclass(frozen=True)
-class AnswerAnalysisOutput:
-    is_correct: bool
-    score: float
-    mistake_type: str
-    weak_concept: str
-    reason: str
-    correct_solution: str
-    interest_based_explanation: str
-    revision_task: str
+        return cls(
+            question_text=str(data.get("question_text", "")).strip(),
+            correct_answer=str(data.get("correct_answer", "")).strip(),
+            student_answer=str(data.get("student_answer", "")).strip(),
+            subject=str(data.get("subject", "General")).strip() or "General",
+            topic=str(data.get("topic", "General")).strip() or "General",
+            grade_level=str(data.get("grade_level", "General")).strip() or "General",
+            learning_style=str(data.get("learning_style", "simple")).strip() or "simple",
+            interests=interests if isinstance(interests, list) else [],
+        )

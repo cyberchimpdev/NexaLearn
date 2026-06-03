@@ -3,85 +3,96 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   AlertCircle,
   ArrowLeft,
-  Brain,
+  BookOpen,
   CheckCircle2,
-  Send,
-  Sparkles,
+  Clock,
+  Loader2,
+  Save,
 } from "lucide-react";
-import { DashboardLayout } from "../../layouts/DashboardLayout";
-import { submitAttempt } from "../../services/attemptService";
-import { getTestDetail } from "../../services/testService";
 
-export function TakeTest() {
+import DashboardLayout from "../../layouts/DashboardLayout";
+import api from "../../services/api";
+import { submitAttempt } from "../../services/attemptService";
+
+function TakeTest() {
   const { testId } = useParams();
   const navigate = useNavigate();
 
   const [test, setTest] = useState(null);
   const [answers, setAnswers] = useState({});
-  const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  const totalMarks = useMemo(() => {
-    if (!test?.questions) return 0;
-    return test.questions.reduce(
-      (sum, question) => sum + Number(question.marks || 0),
-      0,
-    );
-  }, [test]);
+  useEffect(() => {
+    fetchTest();
+  }, [testId]);
 
-  async function loadTest() {
-    setLoading(true);
-    setError("");
+  const normalizeQuestions = (data) => {
+    if (Array.isArray(data?.questions)) return data.questions;
+    if (Array.isArray(data?.test?.questions)) return data.test.questions;
+    return [];
+  };
 
+  const fetchTest = async () => {
     try {
-      const data = await getTestDetail(testId);
-      setTest(data);
+      setLoading(true);
+      setError("");
 
-      const initialAnswers = {};
-      data.questions.forEach((question) => {
-        initialAnswers[question.id] = "";
+      const response = await api.get(`/tests/${testId}/`);
+      const testData = response.data?.test || response.data;
+
+      setTest({
+        ...testData,
+        questions: normalizeQuestions(response.data),
       });
-
-      setAnswers(initialAnswers);
     } catch (err) {
       setError(
         err?.response?.data?.detail ||
-          "Failed to load test. Check backend, login, or test availability.",
+          err?.response?.data?.error ||
+          "Could not load test. Check backend route: /api/tests/:id/",
       );
     } finally {
       setLoading(false);
     }
-  }
+  };
 
-  function updateAnswer(questionId, value) {
+  const questions = useMemo(() => {
+    return Array.isArray(test?.questions) ? test.questions : [];
+  }, [test]);
+
+  const answeredCount = useMemo(() => {
+    return Object.values(answers).filter((value) => String(value).trim())
+      .length;
+  }, [answers]);
+
+  const handleAnswerChange = (questionId, value) => {
     setAnswers((previous) => ({
       ...previous,
       [questionId]: value,
     }));
-  }
+  };
 
-  function validateAnswers() {
-    if (!test?.questions?.length) return "This test has no questions.";
+  const buildPayloadAnswers = () => {
+    return questions.map((question, index) => {
+      const questionId = question.id || question.question_id || index + 1;
 
-    const emptyQuestion = test.questions.find(
-      (question) => !answers[question.id]?.trim(),
-    );
+      return {
+        question_id: questionId,
+        answer: answers[questionId] || "",
+        student_answer: answers[questionId] || "",
+      };
+    });
+  };
 
-    if (emptyQuestion) {
-      return `Please answer Question ${emptyQuestion.order}.`;
+  const handleSubmit = async () => {
+    if (questions.length === 0) {
+      setError("This test has no questions.");
+      return;
     }
 
-    return "";
-  }
-
-  async function handleSubmit(event) {
-    event.preventDefault();
-
-    const validationError = validateAnswers();
-    if (validationError) {
-      setError(validationError);
+    if (answeredCount === 0) {
+      setError("Please answer at least one question before submitting.");
       return;
     }
 
@@ -89,313 +100,205 @@ export function TakeTest() {
     setError("");
 
     try {
-      const payload = {
-        test_id: Number(testId),
-        answers: test.questions.map((question) => ({
-          question_id: question.id,
-          student_answer: answers[question.id] || "",
-        })),
-      };
+      const response = await submitAttempt(testId, buildPayloadAnswers());
 
-      const data = await submitAttempt(payload);
-      setResult(data);
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      const attemptId =
+        response?.id ||
+        response?.attempt_id ||
+        response?.attempt?.id ||
+        response?.data?.id;
+
+      if (attemptId) {
+        navigate(`/student/reports/${attemptId}/mistakes`);
+        return;
+      }
+
+      navigate("/student/reports");
     } catch (err) {
       setError(
         err?.response?.data?.detail ||
-          err?.response?.data?.test_id?.[0] ||
-          "Failed to submit test. Check backend, login token, and question IDs.",
+          err?.response?.data?.error ||
+          "Could not submit attempt. Check backend route: /api/attempts/submit/",
       );
     } finally {
       setSubmitting(false);
     }
-  }
-
-  useEffect(() => {
-    loadTest();
-  }, [testId]);
+  };
 
   if (loading) {
     return (
-      <DashboardLayout title="Take Test">
-        <div className="glass-card p-8 text-center text-sm font-bold text-slate-500">
-          Loading test...
-        </div>
-      </DashboardLayout>
-    );
-  }
-
-  if (error && !test) {
-    return (
-      <DashboardLayout title="Take Test">
-        <div className="glass-card p-8">
-          <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700">
-            {error}
+      <DashboardLayout role="student">
+        <main className="flex min-h-screen items-center justify-center bg-slate-50">
+          <div className="flex items-center gap-3 rounded-3xl border border-slate-200 bg-white px-6 py-5 shadow-sm">
+            <Loader2 className="h-5 w-5 animate-spin text-indigo-600" />
+            <p className="text-sm font-semibold text-slate-700">
+              Loading test...
+            </p>
           </div>
-
-          <Link to="/student/tests" className="btn-secondary mt-6">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Tests
-          </Link>
-        </div>
-      </DashboardLayout>
-    );
-  }
-
-  if (result) {
-    return (
-      <DashboardLayout title="AI Recovery Result">
-        <TestResultView result={result} onRetake={() => setResult(null)} />
+        </main>
       </DashboardLayout>
     );
   }
 
   return (
-    <DashboardLayout title="Take Diagnostic Test">
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {error && (
-          <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700">
-            {error}
-          </div>
-        )}
+    <DashboardLayout role="student">
+      <main className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-5xl space-y-6">
+          <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+            <Link
+              to="/student/tests"
+              className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 transition hover:text-indigo-600"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to tests
+            </Link>
 
-        <section className="glass-card p-6">
-          <Link
-            to="/student/tests"
-            className="mb-5 inline-flex items-center text-sm font-black text-blue-600"
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Tests
-          </Link>
+            <div className="mt-5 flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
+                  {test?.title || "Diagnostic Test"}
+                </h1>
 
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-            <div>
-              <span className="badge">{test.class_level}</span>
-              <h2 className="mt-4 text-3xl font-black text-slate-950">
-                {test.title}
-              </h2>
-              <p className="mt-2 text-sm text-slate-500">
-                {test.subject} • {test.topic}
-              </p>
-              <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-600">
-                {test.description ||
-                  "Answer all questions carefully. NexaLearn AI will analyze your mistakes and generate a personalized recovery card."}
-              </p>
-            </div>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+                  {test?.description ||
+                    "Answer the questions below. NexaLearn will analyze your answers and detect weak concepts."}
+                </p>
 
-            <div className="grid min-w-60 grid-cols-2 gap-3">
-              <MiniStat label="Questions" value={test.questions.length} />
-              <MiniStat label="Marks" value={totalMarks} />
-            </div>
-          </div>
-        </section>
-
-        <section className="space-y-5">
-          {test.questions.map((question, index) => (
-            <article key={question.id} className="glass-card p-6">
-              <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-black text-blue-700">
-                    Question {index + 1}
-                  </span>
-                  <h3 className="mt-4 text-lg font-black leading-8 text-slate-950">
-                    {question.question_text}
-                  </h3>
-                </div>
-
-                <div className="rounded-2xl bg-slate-50 px-4 py-3 text-right">
-                  <p className="text-xs font-bold text-slate-500">Marks</p>
-                  <p className="text-xl font-black text-slate-950">
-                    {question.marks}
-                  </p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <InfoBadge
+                    icon={BookOpen}
+                    text={test?.subject || "General"}
+                  />
+                  <InfoBadge
+                    icon={Clock}
+                    text={`${test?.duration_minutes || 30} min`}
+                  />
+                  <InfoBadge
+                    icon={CheckCircle2}
+                    text={`${answeredCount}/${questions.length} answered`}
+                  />
                 </div>
               </div>
 
-              <label className="label-text">Your Answer</label>
-              <textarea
-                className="input-field min-h-32 resize-y"
-                value={answers[question.id] || ""}
-                onChange={(event) =>
-                  updateAnswer(question.id, event.target.value)
-                }
-                placeholder="Write your answer here..."
-              />
-            </article>
-          ))}
-        </section>
-
-        <div className="sticky bottom-4 z-20 rounded-3xl border border-slate-200 bg-white/90 p-4 shadow-soft backdrop-blur">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm font-black text-slate-950">
-                Submit for AI analysis
-              </p>
-              <p className="text-xs text-slate-500">
-                NexaLearn will detect mistake type, weak concept, and revision
-                task.
-              </p>
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={submitting}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {submitting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+                {submitting ? "Submitting..." : "Submit Test"}
+              </button>
             </div>
+          </section>
 
-            <button disabled={submitting} className="btn-primary">
-              <Send className="mr-2 h-4 w-4" />
-              {submitting ? "Analyzing..." : "Submit Test"}
-            </button>
-          </div>
+          {error && (
+            <div className="flex items-start gap-3 rounded-3xl border border-red-200 bg-red-50 p-5 text-sm text-red-700">
+              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+              <p>{error}</p>
+            </div>
+          )}
+
+          {questions.length === 0 ? (
+            <section className="rounded-3xl border border-slate-200 bg-white p-10 text-center shadow-sm">
+              <h2 className="text-xl font-bold text-slate-950">
+                No questions found
+              </h2>
+              <p className="mt-2 text-sm text-slate-600">
+                This test does not have questions yet.
+              </p>
+            </section>
+          ) : (
+            <section className="space-y-5">
+              {questions.map((question, index) => {
+                const questionId =
+                  question.id || question.question_id || index + 1;
+
+                return (
+                  <article
+                    key={questionId}
+                    className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-sm font-bold text-indigo-600">
+                          Question {index + 1}
+                        </p>
+
+                        <h2 className="mt-2 text-base font-semibold leading-7 text-slate-950">
+                          {question.question_text ||
+                            question.text ||
+                            question.question ||
+                            "Question text unavailable"}
+                        </h2>
+                      </div>
+
+                      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                        {question.marks || 1} marks
+                      </span>
+                    </div>
+
+                    {question.question_type === "mcq" &&
+                    Array.isArray(question.options) &&
+                    question.options.length > 0 ? (
+                      <div className="mt-5 space-y-3">
+                        {question.options.map((option, optionIndex) => (
+                          <label
+                            key={`${questionId}-${optionIndex}`}
+                            className="flex cursor-pointer items-center gap-3 rounded-2xl border border-slate-200 p-4 transition hover:bg-slate-50"
+                          >
+                            <input
+                              type="radio"
+                              name={`question-${questionId}`}
+                              value={option}
+                              checked={answers[questionId] === option}
+                              onChange={(event) =>
+                                handleAnswerChange(
+                                  questionId,
+                                  event.target.value,
+                                )
+                              }
+                              className="h-4 w-4 text-indigo-600"
+                            />
+                            <span className="text-sm font-medium text-slate-700">
+                              {option}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    ) : (
+                      <textarea
+                        value={answers[questionId] || ""}
+                        onChange={(event) =>
+                          handleAnswerChange(questionId, event.target.value)
+                        }
+                        rows={5}
+                        placeholder="Write your answer here..."
+                        className="mt-5 w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
+                      />
+                    )}
+                  </article>
+                );
+              })}
+            </section>
+          )}
         </div>
-      </form>
+      </main>
     </DashboardLayout>
   );
 }
 
-function MiniStat({ label, value }) {
+function InfoBadge({ icon: Icon, text }) {
   return (
-    <div className="rounded-2xl bg-white p-4 shadow-sm">
-      <p className="text-xs font-bold text-slate-500">{label}</p>
-      <p className="mt-1 text-2xl font-black text-slate-950">{value}</p>
-    </div>
+    <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+      <Icon className="h-3.5 w-3.5" />
+      {text}
+    </span>
   );
 }
 
-function TestResultView({ result, onRetake }) {
-  const passed = Number(result.percentage) >= 50;
-
-  return (
-    <div className="space-y-6">
-      <section className="glass-card overflow-hidden">
-        <div className="bg-slate-950 p-6 text-white">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <span className="inline-flex rounded-full bg-white/10 px-3 py-1 text-xs font-black text-blue-200">
-                AI analysis complete
-              </span>
-              <h2 className="mt-4 text-3xl font-black">{result.test_title}</h2>
-              <p className="mt-2 text-sm text-slate-300">
-                {result.subject} • {result.topic} • Class {result.class_level}
-              </p>
-            </div>
-
-            <div className="rounded-3xl bg-white/10 p-5 text-center">
-              <p className="text-sm font-bold text-slate-300">Score</p>
-              <p className="mt-1 text-4xl font-black">
-                {result.total_score}/{result.total_marks}
-              </p>
-              <p className="mt-1 text-sm font-bold text-blue-200">
-                {result.percentage}%
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid gap-4 p-6 md:grid-cols-3">
-          <SummaryCard
-            icon={passed ? CheckCircle2 : AlertCircle}
-            label="Status"
-            value={passed ? "Good progress" : "Needs recovery"}
-          />
-          <SummaryCard
-            icon={Brain}
-            label="AI feedback"
-            value={`${result.answers.length} answer(s) analyzed`}
-          />
-          <SummaryCard
-            icon={Sparkles}
-            label="Next action"
-            value="Follow revision cards"
-          />
-        </div>
-      </section>
-
-      <section className="space-y-5">
-        {result.answers.map((answer) => (
-          <article key={answer.id} className="glass-card p-6">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-              <div>
-                <span
-                  className={[
-                    "inline-flex rounded-full px-3 py-1 text-xs font-black",
-                    answer.is_correct
-                      ? "bg-emerald-50 text-emerald-700"
-                      : "bg-red-50 text-red-700",
-                  ].join(" ")}
-                >
-                  {answer.is_correct ? "Correct" : answer.mistake_type}
-                </span>
-
-                <h3 className="mt-4 text-lg font-black leading-8 text-slate-950">
-                  Q{answer.order}. {answer.question_text}
-                </h3>
-              </div>
-
-              <div className="rounded-2xl bg-slate-50 px-4 py-3 text-right">
-                <p className="text-xs font-bold text-slate-500">Score</p>
-                <p className="text-xl font-black text-slate-950">
-                  {answer.score}/{answer.marks}
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-5 grid gap-4 lg:grid-cols-2">
-              <InfoBlock
-                title="Your answer"
-                text={answer.student_answer || "No answer"}
-              />
-              <InfoBlock title="Correct answer" text={answer.correct_answer} />
-              <InfoBlock title="Weak concept" text={answer.weak_concept} />
-              <InfoBlock title="Why this happened" text={answer.ai_reason} />
-            </div>
-
-            <div className="mt-5 rounded-3xl bg-blue-50 p-5">
-              <p className="text-sm font-black text-blue-900">
-                Personalized explanation
-              </p>
-              <p className="mt-2 whitespace-pre-line text-sm leading-7 text-blue-900/80">
-                {answer.interest_based_explanation}
-              </p>
-            </div>
-
-            <div className="mt-5 rounded-3xl bg-slate-950 p-5 text-white">
-              <p className="text-sm font-black text-blue-200">Revision task</p>
-              <p className="mt-2 whitespace-pre-line text-sm leading-7 text-slate-200">
-                {answer.revision_task}
-              </p>
-            </div>
-          </article>
-        ))}
-      </section>
-
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <Link to="/student/tests" className="btn-primary">
-          Take Another Test
-        </Link>
-        <button onClick={onRetake} className="btn-secondary">
-          Edit Answers and Retake
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function SummaryCard({ icon: Icon, label, value }) {
-  return (
-    <div className="rounded-3xl bg-white p-5">
-      <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
-        <Icon className="h-5 w-5" />
-      </div>
-      <p className="text-xs font-bold text-slate-500">{label}</p>
-      <p className="mt-1 font-black text-slate-950">{value}</p>
-    </div>
-  );
-}
-
-function InfoBlock({ title, text }) {
-  return (
-    <div className="rounded-3xl bg-white p-5">
-      <p className="text-xs font-black uppercase tracking-wide text-slate-400">
-        {title}
-      </p>
-      <p className="mt-2 whitespace-pre-line text-sm leading-7 text-slate-700">
-        {text}
-      </p>
-    </div>
-  );
-}
+export default TakeTest;

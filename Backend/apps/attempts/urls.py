@@ -1,9 +1,9 @@
 from django.urls import path
 
-from .views import AttemptDetailView, StudentAttemptListView, SubmitAttemptView
+from .views import AttemptDetailView, StudentAttemptsView, SubmitAttemptView
 
 urlpatterns = [
     path("submit/", SubmitAttemptView.as_view(), name="submit-attempt"),
-    path("student/", StudentAttemptListView.as_view(), name="student-attempts"),
+    path("student/", StudentAttemptsView.as_view(), name="student-attempts"),
     path("<int:pk>/", AttemptDetailView.as_view(), name="attempt-detail"),
 ]

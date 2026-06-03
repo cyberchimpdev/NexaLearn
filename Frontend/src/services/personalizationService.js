@@ -14,3 +14,8 @@ export async function updateStudentProfile(payload) {
   const response = await api.patch("/personalization/profile/", payload);
   return response.data;
 }
+
+export async function getStudentStreak() {
+  const response = await api.get("/personalization/streak/");
+  return response.data;
+}

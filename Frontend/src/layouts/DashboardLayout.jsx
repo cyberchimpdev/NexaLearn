@@ -1,145 +1,179 @@
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import {
   BarChart3,
-  BookOpenCheck,
+  BookOpen,
   Brain,
-  ClipboardList,
-  LayoutDashboard,
+  GraduationCap,
+  Home,
   LogOut,
+  Menu,
   PlusCircle,
-  Sparkles,
-  UserRoundCog,
+  User,
+  X,
 } from "lucide-react";
-import { useAuth } from "../context/AuthContext";
-import { FloatingAIChatbot } from "../components/common/FloatingAIChatbot";
+import { useState } from "react";
 
-export function DashboardLayout({ title, children }) {
+function DashboardLayout({ children, role = "student" }) {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
 
-  function handleLogout() {
-    logout();
-    navigate("/");
-  }
+  const studentLinks = [
+    {
+      label: "Dashboard",
+      to: "/student",
+      icon: Home,
+    },
+    {
+      label: "Tests",
+      to: "/student/tests",
+      icon: BookOpen,
+    },
+    {
+      label: "Reports",
+      to: "/student/reports",
+      icon: BarChart3,
+    },
+    {
+      label: "AI Tutor",
+      to: "/student/ai",
+      icon: Brain,
+    },
+    {
+      label: "Profile",
+      to: "/student/profile",
+      icon: User,
+    },
+  ];
 
-  const links =
-    user?.role === "teacher"
-      ? [
-          { label: "Dashboard", href: "/teacher", icon: LayoutDashboard },
-          {
-            label: "Create Test",
-            href: "/teacher/tests/create",
-            icon: PlusCircle,
-          },
-        ]
-      : [
-          { label: "Dashboard", href: "/student", icon: LayoutDashboard },
-          {
-            label: "Learning Profile",
-            href: "/student/profile",
-            icon: UserRoundCog,
-          },
-          {
-            label: "Available Tests",
-            href: "/student/tests",
-            icon: BookOpenCheck,
-          },
-          {
-            label: "My Reports",
-            href: "/student/reports",
-            icon: ClipboardList,
-          },
-          { label: "AI Playground", href: "/student/ai", icon: Sparkles },
-        ];
+  const teacherLinks = [
+    {
+      label: "Dashboard",
+      to: "/teacher",
+      icon: Home,
+    },
+    {
+      label: "Create Test",
+      to: "/teacher/tests/create",
+      icon: PlusCircle,
+    },
+  ];
+
+  const links = role === "teacher" ? teacherLinks : studentLinks;
+
+  const handleLogout = () => {
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("access");
+    localStorage.removeItem("refresh_token");
+    localStorage.removeItem("refresh");
+    localStorage.removeItem("token");
+    navigate("/login");
+  };
 
   return (
-    <main className="page-shell">
-      <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/90 backdrop-blur-xl">
-        <div className="container-xl flex h-16 items-center justify-between">
-          <Link to="/dashboard" className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-600/20">
-              <Brain className="h-5 w-5" />
+    <div className="min-h-screen bg-slate-50">
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 w-72 transform border-r border-slate-200 bg-white transition-transform duration-300 lg:translate-x-0 ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <div className="flex h-16 items-center justify-between border-b border-slate-200 px-5">
+          <Link to="/" className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-600 text-white">
+              <GraduationCap className="h-5 w-5" />
             </div>
 
             <div>
-              <p className="text-sm font-black leading-none text-slate-950">
-                NexaLearn
-              </p>
-              <p className="text-xs font-bold text-slate-500">Gap detector</p>
+              <p className="text-sm font-bold text-slate-950">NexaLearn</p>
+              <p className="text-xs capitalize text-slate-500">{role} panel</p>
             </div>
           </Link>
 
-          <div className="flex items-center gap-3">
-            <div className="hidden text-right sm:block">
-              <p className="text-sm font-black text-slate-950">
-                {user?.full_name || "User"}
-              </p>
-              <p className="text-xs font-bold capitalize text-slate-500">
-                {user?.role}
-              </p>
-            </div>
-
-            <button onClick={handleLogout} className="btn-danger">
-              <LogOut className="mr-2 h-4 w-4" />
-              Logout
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(false)}
+            className="rounded-xl p-2 text-slate-500 hover:bg-slate-100 lg:hidden"
+            aria-label="Close sidebar"
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
-      </header>
 
-      <div className="container-xl grid gap-6 py-6 lg:grid-cols-[260px_1fr]">
-        <aside className="glass-card h-fit p-3">
-          <div className="mb-3 rounded-3xl bg-gradient-to-br from-slate-950 to-slate-800 p-5 text-white">
-            <div className="flex items-center gap-3">
-              <div className="rounded-2xl bg-blue-600 p-3">
-                <BarChart3 className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-sm font-black">Workspace</p>
-                <p className="text-xs text-slate-300 capitalize">
-                  {user?.role} panel
-                </p>
-              </div>
-            </div>
+        <nav className="space-y-1 p-4">
+          {links.map((item) => {
+            const Icon = item.icon;
+
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.to === "/student" || item.to === "/teacher"}
+                onClick={() => setSidebarOpen(false)}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold transition ${
+                    isActive
+                      ? "bg-indigo-600 text-white shadow-sm shadow-indigo-200"
+                      : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
+                  }`
+                }
+              >
+                <Icon className="h-4 w-4" />
+                {item.label}
+              </NavLink>
+            );
+          })}
+        </nav>
+
+        <div className="absolute bottom-0 left-0 right-0 border-t border-slate-200 p-4">
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+          >
+            <LogOut className="h-4 w-4" />
+            Logout
+          </button>
+        </div>
+      </aside>
+
+      {sidebarOpen && (
+        <button
+          type="button"
+          aria-label="Close sidebar overlay"
+          onClick={() => setSidebarOpen(false)}
+          className="fixed inset-0 z-40 bg-slate-950/40 lg:hidden"
+        />
+      )}
+
+      <div className="lg:pl-72">
+        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-slate-200 bg-white/90 px-4 backdrop-blur sm:px-6 lg:px-8">
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(true)}
+            className="rounded-xl p-2 text-slate-600 hover:bg-slate-100 lg:hidden"
+            aria-label="Open sidebar"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+
+          <div>
+            <p className="text-sm font-semibold text-slate-950">
+              {role === "teacher" ? "Teacher Dashboard" : "Student Dashboard"}
+            </p>
+            <p className="text-xs text-slate-500">
+              AI-powered learning recovery platform
+            </p>
           </div>
 
-          <nav className="space-y-2">
-            {links.map((link) => {
-              const Icon = link.icon;
-
-              return (
-                <NavLink
-                  key={link.href}
-                  to={link.href}
-                  end={link.href === "/teacher" || link.href === "/student"}
-                  className={({ isActive }) =>
-                    [
-                      "nav-item flex items-center gap-3",
-                      isActive ? "nav-item-active" : "nav-item-inactive",
-                    ].join(" ")
-                  }
-                >
-                  <Icon className="h-4 w-4" />
-                  {link.label}
-                </NavLink>
-              );
-            })}
-          </nav>
-        </aside>
-
-        <section className="min-w-0">
-          <div className="mb-6">
-            <p className="badge mb-3">NexaLearn Dashboard</p>
-            <h1 className="text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
-              {title}
-            </h1>
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
+            <User className="h-5 w-5" />
           </div>
+        </header>
 
-          {children}
-        </section>
+        {children}
       </div>
-
-      {user?.role === "student" && <FloatingAIChatbot />}
-    </main>
+    </div>
   );
 }
+
+export default DashboardLayout;
+export { DashboardLayout };

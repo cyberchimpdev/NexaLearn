@@ -1,8 +1,4 @@
-from __future__ import annotations
-
 from rest_framework import serializers
-
-from apps.tests_app.models import Test
 
 from .models import AnswerAttempt, Attempt
 
@@ -16,44 +12,23 @@ class SubmitAttemptSerializer(serializers.Serializer):
     test_id = serializers.IntegerField()
     answers = SubmittedAnswerSerializer(many=True)
 
-    def validate_test_id(self, value: int) -> int:
-        if not Test.objects.filter(id=value, is_published=True).exists():
-            raise serializers.ValidationError("Test not found or not published.")
-        return value
-
-    def validate_answers(self, value: list[dict]) -> list[dict]:
-        if not value:
-            raise serializers.ValidationError("At least one answer is required.")
-        return value
-
 
 class AnswerAttemptSerializer(serializers.ModelSerializer):
-    question_text = serializers.CharField(
-        source="question.question_text",
-        read_only=True,
-    )
-    correct_answer = serializers.CharField(
-        source="question.correct_answer",
-        read_only=True,
-    )
-    marks = serializers.IntegerField(
-        source="question.marks",
-        read_only=True,
-    )
-    order = serializers.IntegerField(
-        source="question.order",
-        read_only=True,
-    )
+    question_text = serializers.CharField(source="question.question_text", read_only=True)
+    correct_answer = serializers.CharField(source="question.correct_answer", read_only=True)
+    marks = serializers.IntegerField(source="question.marks", read_only=True)
+    order = serializers.IntegerField(source="question.order", read_only=True)
 
     class Meta:
         model = AnswerAttempt
         fields = [
             "id",
+            "question",
             "question_text",
             "correct_answer",
-            "student_answer",
             "marks",
             "order",
+            "student_answer",
             "is_correct",
             "score",
             "mistake_type",
@@ -62,16 +37,16 @@ class AnswerAttemptSerializer(serializers.ModelSerializer):
             "correct_solution",
             "interest_based_explanation",
             "revision_task",
-            "created_at",
         ]
 
 
 class AttemptDetailSerializer(serializers.ModelSerializer):
+    answers = AnswerAttemptSerializer(many=True, read_only=True)
     test_title = serializers.CharField(source="test.title", read_only=True)
     subject = serializers.CharField(source="test.subject", read_only=True)
     topic = serializers.CharField(source="test.topic", read_only=True)
     class_level = serializers.CharField(source="test.class_level", read_only=True)
-    answers = AnswerAttemptSerializer(many=True, read_only=True)
+    percentage = serializers.SerializerMethodField()
 
     class Meta:
         model = Attempt
@@ -89,22 +64,7 @@ class AttemptDetailSerializer(serializers.ModelSerializer):
             "answers",
         ]
 
-
-class AttemptListSerializer(serializers.ModelSerializer):
-    test_title = serializers.CharField(source="test.title", read_only=True)
-    subject = serializers.CharField(source="test.subject", read_only=True)
-    topic = serializers.CharField(source="test.topic", read_only=True)
-
-    class Meta:
-        model = Attempt
-        fields = [
-            "id",
-            "test",
-            "test_title",
-            "subject",
-            "topic",
-            "total_score",
-            "total_marks",
-            "percentage",
-            "submitted_at",
-        ]
+    def get_percentage(self, obj):
+        if not obj.total_marks:
+            return 0
+        return round((float(obj.total_score) / float(obj.total_marks)) * 100, 2)

@@ -1,175 +1,223 @@
-import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
+  ArrowRight,
   BarChart3,
   BookOpen,
-  FileText,
+  Brain,
+  ClipboardList,
+  GraduationCap,
   PlusCircle,
-  UsersRound,
+  Sparkles,
+  Target,
+  Users,
 } from "lucide-react";
-import { DashboardLayout } from "../../layouts/DashboardLayout";
-import { getTeacherDashboardSummary } from "../../services/reportService";
-import { getTests } from "../../services/testService";
 
-export function TeacherDashboard() {
-  const [tests, setTests] = useState([]);
-  const [summary, setSummary] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+import DashboardLayout from "../../layouts/DashboardLayout";
 
-  async function loadDashboard() {
-    setLoading(true);
-    setError("");
+function TeacherDashboard() {
+  const stats = [
+    {
+      label: "Created Tests",
+      value: "8",
+      icon: ClipboardList,
+      tone: "bg-blue-50 text-blue-600",
+    },
+    {
+      label: "Students",
+      value: "42",
+      icon: Users,
+      tone: "bg-emerald-50 text-emerald-600",
+    },
+    {
+      label: "Weak Concepts",
+      value: "12",
+      icon: Target,
+      tone: "bg-red-50 text-red-600",
+    },
+    {
+      label: "AI Reports",
+      value: "24",
+      icon: Brain,
+      tone: "bg-indigo-50 text-indigo-600",
+    },
+  ];
 
-    try {
-      const [testsData, summaryData] = await Promise.all([
-        getTests(),
-        getTeacherDashboardSummary(),
-      ]);
-
-      setTests(testsData);
-      setSummary(summaryData);
-    } catch (err) {
-      setError(
-        err?.response?.data?.detail ||
-          "Failed to load dashboard. Check backend and login token.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    loadDashboard();
-  }, []);
+  const actions = [
+    {
+      title: "Create Diagnostic Test",
+      description:
+        "Build class-wise tests with questions, marks, answers, and topic information.",
+      href: "/teacher/tests/create",
+      icon: PlusCircle,
+    },
+    {
+      title: "View Test Reports",
+      description:
+        "Open reports after students submit tests and review weak concept patterns.",
+      href: "/teacher",
+      icon: BarChart3,
+    },
+    {
+      title: "Remedial Groups",
+      description:
+        "Group students by similar mistake patterns and reteach faster.",
+      href: "/teacher",
+      icon: Users,
+    },
+  ];
 
   return (
-    <DashboardLayout title="Teacher Dashboard">
-      <div className="space-y-6">
-        {error && (
-          <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700">
-            {error}
-          </div>
-        )}
+    <DashboardLayout role="teacher">
+      <main className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl space-y-6">
+          <section className="overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-blue-600 to-slate-900 p-6 text-white shadow-sm sm:p-8">
+            <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
+              <div>
+                <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold ring-1 ring-white/20">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Teacher Dashboard
+                </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
-          <StatCard
-            icon={FileText}
-            label="Total Tests"
-            value={summary?.total_tests ?? tests.length}
-          />
-          <StatCard
-            icon={UsersRound}
-            label="Total Attempts"
-            value={summary?.total_attempts ?? 0}
-          />
-          <StatCard icon={BarChart3} label="AI Reports" value="Live" />
-        </div>
+                <h1 className="mt-5 text-2xl font-bold tracking-tight sm:text-4xl">
+                  Detect learning gaps and guide students faster.
+                </h1>
 
-        <section className="glass-card p-6">
-          <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-2xl font-black text-slate-950">
-                Your Diagnostic Tests
-              </h2>
-              <p className="mt-1 text-sm text-slate-500">
-                Create tests and review AI-generated learning gap reports.
-              </p>
+                <p className="mt-4 max-w-2xl text-sm leading-7 text-indigo-50 sm:text-base">
+                  Create diagnostic tests, analyze student mistakes, identify
+                  weak concepts, and use AI-powered reports to plan targeted
+                  remedial teaching.
+                </p>
+
+                <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                  <Link
+                    to="/teacher/tests/create"
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-bold text-indigo-700 transition hover:bg-indigo-50"
+                  >
+                    Create Test
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+
+                  <Link
+                    to="/teacher"
+                    className="inline-flex items-center justify-center rounded-2xl border border-white/20 px-5 py-3 text-sm font-bold text-white transition hover:bg-white/10"
+                  >
+                    View Reports
+                  </Link>
+                </div>
+              </div>
+
+              <div className="rounded-3xl bg-white/10 p-5 ring-1 ring-white/20">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-indigo-600">
+                    <GraduationCap className="h-6 w-6" />
+                  </div>
+
+                  <div>
+                    <p className="text-sm text-indigo-100">Teacher Control</p>
+                    <p className="text-lg font-bold">Human-centered AI</p>
+                  </div>
+                </div>
+
+                <p className="mt-4 text-sm leading-6 text-indigo-50">
+                  NexaLearn supports teachers by reducing manual diagnosis work.
+                  Teachers still control tests, interpretation, and
+                  intervention.
+                </p>
+              </div>
             </div>
+          </section>
 
-            <Link to="/teacher/tests/create" className="btn-primary">
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Create Test
-            </Link>
-          </div>
+          <section className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+            {stats.map((item) => {
+              const Icon = item.icon;
 
-          {loading ? (
-            <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center text-sm font-bold text-slate-500">
-              Loading tests...
-            </div>
-          ) : tests.length === 0 ? (
-            <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-8 text-center">
-              <BookOpen className="mx-auto h-10 w-10 text-slate-400" />
-              <h3 className="mt-4 text-lg font-black text-slate-950">
-                No tests created yet
-              </h3>
-              <p className="mt-2 text-sm text-slate-500">
-                Create your first diagnostic test for NexaLearn AI analysis.
-              </p>
-              <Link to="/teacher/tests/create" className="btn-primary mt-5">
-                Create First Test
-              </Link>
-            </div>
-          ) : (
-            <div className="grid gap-4 lg:grid-cols-2">
-              {tests.map((test) => (
+              return (
                 <article
-                  key={test.id}
-                  className="rounded-3xl border border-slate-200 bg-white p-5 transition hover:-translate-y-1 hover:shadow-soft"
+                  key={item.label}
+                  className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm"
                 >
-                  <div className="mb-4 flex items-start justify-between gap-4">
+                  <div className="flex items-center justify-between gap-4">
                     <div>
-                      <span className="badge">{test.class_level}</span>
-                      <h3 className="mt-3 text-lg font-black text-slate-950">
-                        {test.title}
-                      </h3>
-                      <p className="mt-1 text-sm text-slate-500">
-                        {test.subject} • {test.topic}
+                      <p className="text-sm font-semibold text-slate-500">
+                        {item.label}
+                      </p>
+                      <p className="mt-2 text-3xl font-bold text-slate-950">
+                        {item.value}
                       </p>
                     </div>
 
-                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold capitalize text-slate-600">
-                      {test.difficulty}
-                    </span>
+                    <div
+                      className={`flex h-12 w-12 items-center justify-center rounded-2xl ${item.tone}`}
+                    >
+                      <Icon className="h-6 w-6" />
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
+          </section>
+
+          <section className="grid gap-5 lg:grid-cols-3">
+            {actions.map((item) => {
+              const Icon = item.icon;
+
+              return (
+                <Link
+                  key={item.title}
+                  to={item.href}
+                  className="group rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:border-indigo-200 hover:shadow-md"
+                >
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 transition group-hover:bg-indigo-600 group-hover:text-white">
+                    <Icon className="h-6 w-6" />
                   </div>
 
-                  <p className="text-sm leading-6 text-slate-600">
-                    {test.description || "No description provided."}
+                  <h2 className="mt-5 text-lg font-bold text-slate-950">
+                    {item.title}
+                  </h2>
+
+                  <p className="mt-2 text-sm leading-6 text-slate-600">
+                    {item.description}
                   </p>
 
-                  <div className="mt-5 grid grid-cols-2 gap-3">
-                    <MiniStat label="Questions" value={test.question_count} />
-                    <MiniStat label="Marks" value={test.total_marks} />
+                  <div className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-indigo-600">
+                    Open
+                    <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
                   </div>
+                </Link>
+              );
+            })}
+          </section>
 
-                  <Link
-                    to={`/teacher/tests/${test.id}/report`}
-                    className="btn-primary mt-5 w-full py-2"
-                  >
-                    View Report
-                  </Link>
-                </article>
-              ))}
+          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white">
+                <BookOpen className="h-6 w-6" />
+              </div>
+
+              <div>
+                <h2 className="text-lg font-bold text-slate-950">
+                  Recommended workflow
+                </h2>
+
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  Create a diagnostic test, let students submit answers, then
+                  review AI-generated weak concept reports and remedial groups.
+                </p>
+
+                <Link
+                  to="/teacher/tests/create"
+                  className="mt-5 inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-indigo-700"
+                >
+                  Create First Test
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </div>
             </div>
-          )}
-        </section>
-      </div>
+          </section>
+        </div>
+      </main>
     </DashboardLayout>
   );
 }
 
-function StatCard({ icon: Icon, label, value }) {
-  return (
-    <div className="glass-card p-5">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <p className="text-sm font-bold text-slate-500">{label}</p>
-          <p className="mt-2 text-3xl font-black text-slate-950">{value}</p>
-        </div>
-
-        <div className="rounded-2xl bg-blue-50 p-3 text-blue-600">
-          <Icon className="h-6 w-6" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function MiniStat({ label, value }) {
-  return (
-    <div className="rounded-2xl bg-slate-50 p-4">
-      <p className="text-xs font-bold text-slate-500">{label}</p>
-      <p className="mt-1 text-xl font-black text-slate-950">{value ?? 0}</p>
-    </div>
-  );
-}
+export default TeacherDashboard;

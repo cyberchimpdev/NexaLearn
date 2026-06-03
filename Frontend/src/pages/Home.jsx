@@ -87,7 +87,7 @@ const classLevels = [
   },
 ];
 
-export function Home() {
+function Home() {
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.12),transparent_32rem),radial-gradient(circle_at_top_right,rgba(99,102,241,0.10),transparent_30rem),#f8fafc] text-slate-950">
       <PublicNavbar />
@@ -148,7 +148,11 @@ function PublicNavbar() {
               <Link to="/dashboard" className="btn-secondary py-2">
                 Dashboard
               </Link>
-              <button onClick={handleLogout} className="btn-primary py-2">
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="btn-primary py-2"
+              >
                 Logout
               </button>
             </>
@@ -198,7 +202,11 @@ function PublicNavbar() {
                   >
                     Dashboard
                   </Link>
-                  <button onClick={handleLogout} className="btn-primary">
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="btn-primary"
+                  >
                     Logout
                   </button>
                 </>
@@ -504,19 +512,23 @@ function FeatureSection() {
         </div>
 
         <div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-          {features.map((feature) => (
-            <article key={feature.title} className="glass-card p-6">
-              <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
-                <feature.icon className="h-6 w-6" />
-              </div>
-              <h3 className="text-lg font-black text-slate-950">
-                {feature.title}
-              </h3>
-              <p className="mt-3 text-sm leading-7 text-slate-600">
-                {feature.text}
-              </p>
-            </article>
-          ))}
+          {features.map((feature) => {
+            const Icon = feature.icon;
+
+            return (
+              <article key={feature.title} className="glass-card p-6">
+                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+                  <Icon className="h-6 w-6" />
+                </div>
+                <h3 className="text-lg font-black text-slate-950">
+                  {feature.title}
+                </h3>
+                <p className="mt-3 text-sm leading-7 text-slate-600">
+                  {feature.text}
+                </p>
+              </article>
+            );
+          })}
         </div>
       </div>
     </section>
@@ -563,7 +575,7 @@ function CtaSection() {
   return (
     <section className="py-16 sm:py-20">
       <div className="container-xl">
-        <div className="overflow-hidden rounded-4xl bg-linear-to-br from-blue-600 to-indigo-700 p-8 text-white shadow-soft sm:p-12">
+        <div className="overflow-hidden rounded-[2rem] bg-gradient-to-br from-blue-600 to-indigo-700 p-8 text-white shadow-xl sm:p-12">
           <div className="mx-auto max-w-3xl text-center">
             <h2 className="text-3xl font-black tracking-tight sm:text-4xl">
               Turn wrong answers into personalized learning recovery.
@@ -576,7 +588,7 @@ function CtaSection() {
             <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
               <Link
                 to="/register"
-                className="inline-flex items-center justify-center rounded-2xl bg-blend-color px-5 py-3 text-sm font-black text-blue-700 transition hover:-translate-y-0.5"
+                className="inline-flex items-center justify-center rounded-2xl bg-white px-5 py-3 text-sm font-black text-blue-700 transition hover:-translate-y-0.5"
               >
                 Create Account
                 <ChevronRight className="ml-2 h-4 w-4" />
@@ -654,3 +666,5 @@ function Footer() {
     </footer>
   );
 }
+
+export default Home;

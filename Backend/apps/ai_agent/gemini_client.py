@@ -15,8 +15,7 @@ class GeminiChatClient:
             from google import genai
         except ImportError as exc:
             raise ImportError(
-                "Gemini SDK is not installed correctly. Run: "
-                "python -m pip install -U google-genai"
+                "Gemini SDK is not installed. Run: python -m pip install -U google-genai"
             ) from exc
 
         self.client = genai.Client(api_key=self.api_key)
@@ -31,33 +30,32 @@ class GeminiChatClient:
         student_interest: str,
         explanation_style: str,
     ) -> str:
-        system_instruction = f"""
+        prompt = f"""
 You are NexaLearn AI Chatbot.
 
-Your role:
-- Help students understand weak concepts.
-- Explain using class-wise language.
-- Use interest-based examples.
-- Support teachers and students, not replace teachers.
-- Keep answers practical, clear, and learning-focused.
+Goal:
+Answer student doubts for any subject and any topic.
 
-Student context:
+Student profile:
 Class level: {class_level}
 Subject: {subject}
 Topic: {topic or "Not specified"}
-Student interest: {student_interest}
-Preferred explanation style: {explanation_style}
+Interest: {student_interest}
+Style: {explanation_style}
 
-Response rules:
-1. Start with a simple direct answer.
-2. Explain step by step.
-3. Use the student's interest as an analogy when useful.
-4. Add one mini practice task.
-5. Keep it under 250 words unless the student asks for detail.
-6. Do not mention Gemini.
+Rules:
+- Keep answer short and useful.
+- Maximum 140 words unless the student asks for detail.
+- Start directly with the answer.
+- Use simple language.
+- Use the student's interest only when it actually helps.
+- Add 1 mini practice task at the end.
+- Do not say you are Gemini.
+- Do not replace the teacher; support learning.
+
+Student question:
+{message}
 """
-
-        prompt = f"{system_instruction}\n\nStudent question:\n{message}"
 
         response = self.client.models.generate_content(
             model=self.model,
@@ -67,9 +65,6 @@ Response rules:
         text = getattr(response, "text", None)
 
         if not text:
-            return (
-                "I could not generate a response right now. "
-                "Try asking again with a clearer question."
-            )
+            return "I could not generate a response right now. Try asking again clearly."
 
         return text.strip()

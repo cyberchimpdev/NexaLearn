@@ -3,82 +3,70 @@ from __future__ import annotations
 from dataclasses import asdict
 
 from django.db import transaction
-from rest_framework import generics, permissions, status
-from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.accounts.models import User
 from apps.ai_agent.schemas import AnswerAnalysisInput
 from apps.ai_agent.services import AIAnalysisService
-from apps.personalization.models import StudentProfile
-from apps.tests_app.models import Test
+from apps.personalization.models import StudentProfile, StudentStreak
+from apps.tests_app.models import Question, Test
 
 from .models import AnswerAttempt, Attempt
-from .serializers import (
-    AttemptDetailSerializer,
-    AttemptListSerializer,
-    SubmitAttemptSerializer,
-)
+from .serializers import AttemptDetailSerializer, SubmitAttemptSerializer
 
 
 class SubmitAttemptView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
-    def get(self, request):
-        return Response(
-            {
-                "message": "Use POST to submit a test attempt.",
-                "required_format": {
-                    "test_id": 1,
-                    "answers": [
-                        {
-                            "question_id": 1,
-                            "student_answer": "your answer"
-                        }
-                    ]
-                }
-            },
-            status=status.HTTP_200_OK,
-        )
-
     @transaction.atomic
     def post(self, request):
         if request.user.role != User.Role.STUDENT:
-            raise PermissionDenied("Only students can submit test attempts.")
+            return Response(
+                {"detail": "Only students can submit attempts."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         serializer = SubmitAttemptSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        test = (
-            Test.objects.prefetch_related("questions")
-            .filter(id=serializer.validated_data["test_id"], is_published=True)
-            .first()
-        )
+        test_id = serializer.validated_data["test_id"]
+        submitted_answers = serializer.validated_data["answers"]
 
-        if test is None:
-            raise ValidationError("Test not found.")
+        try:
+            test = Test.objects.prefetch_related("questions").get(id=test_id, is_published=True)
+        except Test.DoesNotExist:
+            return Response(
+                {"detail": "Test not found or not published."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
 
-        profile, _ = StudentProfile.objects.get_or_create(user=request.user)
+        profile, _ = StudentProfile.objects.get_or_create(student=request.user)
 
-        answer_map = {
-            item["question_id"]: item["student_answer"]
-            for item in serializer.validated_data["answers"]
+        question_map = {
+            question.id: question
+            for question in test.questions.all()
         }
-
-        total_marks = sum(question.marks for question in test.questions.all())
 
         attempt = Attempt.objects.create(
             student=request.user,
             test=test,
-            total_marks=total_marks,
+            total_score=0,
+            total_marks=sum(question.marks for question in question_map.values()),
         )
 
         ai_service = AIAnalysisService()
-        total_score = 0.0
+        total_score = 0
 
-        for question in test.questions.all():
-            student_answer = answer_map.get(question.id, "")
+        for submitted in submitted_answers:
+            question_id = submitted["question_id"]
+            student_answer = submitted.get("student_answer", "")
+
+            question = question_map.get(question_id)
+
+            if not question:
+                continue
 
             ai_payload = AnswerAnalysisInput(
                 class_level=test.class_level,
@@ -112,43 +100,58 @@ class SubmitAttemptView(APIView):
             )
 
         attempt.total_score = total_score
-        attempt.percentage = round((total_score / total_marks) * 100, 2) if total_marks else 0
-        attempt.save(update_fields=["total_score", "percentage"])
+        attempt.save(update_fields=["total_score"])
 
-        output_serializer = AttemptDetailSerializer(attempt)
-        return Response(output_serializer.data, status=status.HTTP_201_CREATED)
+        streak, _ = StudentStreak.objects.get_or_create(student=request.user)
+        streak.mark_activity()
+
+        detail_serializer = AttemptDetailSerializer(attempt)
+
+        return Response(detail_serializer.data, status=status.HTTP_201_CREATED)
 
 
-class StudentAttemptListView(generics.ListAPIView):
+class StudentAttemptsView(APIView):
     permission_classes = [permissions.IsAuthenticated]
-    serializer_class = AttemptListSerializer
 
-    def get_queryset(self):
-        if self.request.user.role != User.Role.STUDENT:
-            raise PermissionDenied("Only students can view their attempts.")
+    def get(self, request):
+        if request.user.role != User.Role.STUDENT:
+            return Response(
+                {"detail": "Only students can view attempts."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
-        return (
-            Attempt.objects.select_related("test", "student")
-            .filter(student=self.request.user)
+        attempts = (
+            Attempt.objects.filter(student=request.user)
+            .select_related("test")
+            .prefetch_related("answers", "answers__question")
             .order_by("-submitted_at")
         )
 
+        serializer = AttemptDetailSerializer(attempts, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
-class AttemptDetailView(generics.RetrieveAPIView):
+
+class AttemptDetailView(APIView):
     permission_classes = [permissions.IsAuthenticated]
-    serializer_class = AttemptDetailSerializer
 
-    def get_queryset(self):
-        queryset = (
-            Attempt.objects.select_related("test", "student")
-            .prefetch_related("answers", "answers__question")
-            .all()
-        )
+    def get(self, request, pk):
+        try:
+            attempt = (
+                Attempt.objects.select_related("test", "student")
+                .prefetch_related("answers", "answers__question")
+                .get(pk=pk)
+            )
+        except Attempt.DoesNotExist:
+            return Response(
+                {"detail": "Attempt not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
 
-        if self.request.user.role == User.Role.STUDENT:
-            return queryset.filter(student=self.request.user)
+        if request.user.role == User.Role.STUDENT and attempt.student_id != request.user.id:
+            return Response(
+                {"detail": "You cannot view this attempt."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
-        if self.request.user.role == User.Role.TEACHER:
-            return queryset.filter(test__created_by=self.request.user)
-
-        return Attempt.objects.none()
+        serializer = AttemptDetailSerializer(attempt)
+        return Response(serializer.data, status=status.HTTP_200_OK)
