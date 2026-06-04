@@ -143,7 +143,7 @@ function PublicNavbar() {
   }
 
   return (
-    <header className="fixed inset-x-0 top-0 z-50 border-b border-slate-200/80 bg-white/85 backdrop-blur-2xl">
+    <header className="fixed left-0 right-0 top-0 z-50 border-b border-slate-200/80 bg-white/90 shadow-sm shadow-slate-950/5 backdrop-blur-2xl">
       <div className="container-xl flex h-16 items-center justify-between">
         <Link to="/" className="group flex items-center gap-3">
           <div className="relative">
