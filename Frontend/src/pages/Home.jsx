@@ -2,12 +2,10 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowRight,
-  BarChart3,
   BookOpenCheck,
   CheckCircle2,
   ChevronRight,
   ClipboardList,
-  GraduationCap,
   Layers3,
   Lightbulb,
   LineChart,
@@ -15,11 +13,13 @@ import {
   MessageSquareText,
   School,
   ShieldCheck,
+  Sparkles,
   Target,
   UsersRound,
   X,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import logo from "../assets/logo.png";
 
 const navLinks = [
   { label: "Problem", href: "#problem" },
@@ -112,7 +112,7 @@ const features = [
 
 function Home() {
   return (
-    <main className="min-h-screen bg-[#f7f8fb] text-slate-950">
+    <main className="page-surface min-h-screen overflow-x-hidden">
       <PublicNavbar />
       <HeroSection />
       <ProblemSection />
@@ -143,11 +143,16 @@ function PublicNavbar() {
   }
 
   return (
-    <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur-xl">
+    <header className="fixed inset-x-0 top-0 z-50 border-b border-slate-200/80 bg-white/85 backdrop-blur-2xl">
       <div className="container-xl flex h-16 items-center justify-between">
-        <Link to="/" className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-950 text-white">
-            <GraduationCap className="h-5 w-5" />
+        <Link to="/" className="group flex items-center gap-3">
+          <div className="relative">
+            <div className="absolute inset-0 rounded-2xl bg-sky-300/30 blur-lg opacity-0 transition group-hover:opacity-100" />
+            <img
+              src={logo}
+              alt="NexaLearn logo"
+              className="relative h-12 w-12 rounded-2xl object-contain transition duration-300 group-hover:scale-105"
+            />
           </div>
 
           <div>
@@ -165,7 +170,7 @@ function PublicNavbar() {
             <a
               key={link.href}
               href={link.href}
-              className="text-sm font-bold text-slate-600 transition hover:text-slate-950"
+              className="nav-link relative after:absolute after:-bottom-2 after:left-0 after:h-0.5 after:w-0 after:rounded-full after:bg-sky-500 after:transition-all hover:after:w-full"
             >
               {link.label}
             </a>
@@ -181,7 +186,7 @@ function PublicNavbar() {
               <button
                 type="button"
                 onClick={handleLogout}
-                className="btn-primary bg-slate-950 py-2 hover:bg-slate-800"
+                className="btn-primary py-2"
               >
                 Logout
               </button>
@@ -191,10 +196,7 @@ function PublicNavbar() {
               <Link to="/login" className="btn-secondary py-2">
                 Login
               </Link>
-              <Link
-                to="/register"
-                className="btn-primary bg-slate-950 py-2 hover:bg-slate-800"
-              >
+              <Link to="/register" className="btn-primary py-2">
                 Get Started
               </Link>
             </>
@@ -204,7 +206,7 @@ function PublicNavbar() {
         <button
           type="button"
           onClick={() => setOpen((value) => !value)}
-          className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 lg:hidden"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-sky-200 hover:bg-sky-50 hover:text-sky-700 lg:hidden"
           aria-label="Toggle navigation"
         >
           {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -212,14 +214,14 @@ function PublicNavbar() {
       </div>
 
       {open ? (
-        <div className="border-t border-slate-200 bg-white lg:hidden">
+        <div className="animate-fade-in border-t border-slate-200 bg-white lg:hidden">
           <div className="container-xl space-y-2 py-4">
             {navLinks.map((link) => (
               <a
                 key={link.href}
                 href={link.href}
                 onClick={() => setOpen(false)}
-                className="block rounded-xl px-4 py-3 text-sm font-bold text-slate-600 hover:bg-slate-100 hover:text-slate-950"
+                className="block rounded-2xl px-4 py-3 text-sm font-bold text-slate-600 transition hover:bg-sky-50 hover:text-sky-700"
               >
                 {link.label}
               </a>
@@ -238,7 +240,7 @@ function PublicNavbar() {
                   <button
                     type="button"
                     onClick={handleLogout}
-                    className="btn-primary bg-slate-950 hover:bg-slate-800"
+                    className="btn-primary"
                   >
                     Logout
                   </button>
@@ -255,7 +257,7 @@ function PublicNavbar() {
                   <Link
                     to="/register"
                     onClick={() => setOpen(false)}
-                    className="btn-primary bg-slate-950 hover:bg-slate-800"
+                    className="btn-primary"
                   >
                     Get Started
                   </Link>
@@ -272,16 +274,23 @@ function PublicNavbar() {
 function HeroSection() {
   return (
     <section className="relative overflow-hidden border-b border-slate-200 bg-white">
-      <div className="container-xl py-10 sm:py-12 lg:py-16">
+      <div className="brand-orb -right-28 -top-28 h-80 w-80 bg-sky-200/50" />
+      <div className="brand-orb -bottom-32 left-8 h-80 w-80 bg-emerald-200/50 animation-delay-300" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.08),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(34,197,94,0.08),transparent_32%)]" />
+
+      <div className="container-xl relative py-10 sm:py-12 lg:py-16">
         <div className="grid gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
-          <div>
-            <div className="badge-muted">
+          <div className="animate-fade-up">
+            <div className="badge">
               <School className="mr-2 h-4 w-4" />
               Built for teachers, students, and real classrooms
             </div>
 
             <h1 className="mt-4 max-w-5xl text-4xl font-black tracking-[-0.045em] text-slate-950 sm:text-5xl lg:text-6xl">
-              Turn every wrong answer into a clear learning recovery plan.
+              Turn every wrong answer into a{" "}
+              <span className="brand-text-gradient">
+                clear learning recovery plan.
+              </span>
             </h1>
 
             <p className="mt-4 max-w-2xl text-base leading-8 text-slate-600 sm:text-lg">
@@ -291,7 +300,7 @@ function HeroSection() {
             </p>
 
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-              <Link to="/register" className="btn-dark px-6 py-4">
+              <Link to="/register" className="btn-primary px-6 py-4">
                 Start Learning Recovery
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
@@ -303,64 +312,66 @@ function HeroSection() {
 
             <div className="mt-6 grid gap-3 sm:grid-cols-3">
               <Metric value="3x" label="Faster feedback loop" />
-              <Metric value="24h" label="Hackathon-ready MVP" />
+              <Metric value="100%" label="Study Friendly" />
               <Metric value="2" label="Dashboards: teacher + student" />
             </div>
           </div>
 
-          <div className="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-3 shadow-xl shadow-slate-200/70">
-            <div className="rounded-[1.35rem] bg-white p-4 shadow-sm sm:p-5">
-              <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-4">
-                <div>
-                  <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
-                    Student Attempt Review
-                  </p>
-                  <h2 className="mt-2 text-lg font-black text-slate-950 sm:text-xl">
-                    Physics: Electric Field
-                  </h2>
+          <div className="animate-fade-up animation-delay-200">
+            <div className="animate-float-soft rounded-[1.75rem] border border-slate-200 bg-slate-50/90 p-3 shadow-xl shadow-sky-100/70">
+              <div className="shine-card rounded-[1.35rem] bg-white p-4 shadow-sm sm:p-5">
+                <div className="flex flex-col gap-4 border-b border-slate-100 pb-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
+                      Student Attempt Review
+                    </p>
+                    <h2 className="mt-2 text-lg font-black text-slate-950 sm:text-xl">
+                      Physics: Electric Field
+                    </h2>
+                  </div>
+
+                  <div className="w-fit rounded-2xl bg-emerald-50 px-4 py-3 text-center">
+                    <p className="text-xs font-bold text-emerald-600">Score</p>
+                    <p className="text-xl font-black text-emerald-700">6/10</p>
+                  </div>
                 </div>
 
-                <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-center">
-                  <p className="text-xs font-bold text-emerald-600">Score</p>
-                  <p className="text-xl font-black text-emerald-700">6/10</p>
+                <div className="mt-4 space-y-3">
+                  <InsightCard
+                    label="Weak concept"
+                    value="Formula application: E = F/q"
+                    tone="amber"
+                  />
+
+                  <InsightCard
+                    label="Mistake type"
+                    value="Correct formula selected, wrong substitution step"
+                    tone="red"
+                  />
+
+                  <InsightCard
+                    label="Teacher action"
+                    value="Group with students struggling in force-charge relation"
+                    tone="blue"
+                  />
+
+                  <div className="rounded-2xl bg-slate-950 p-4 text-white">
+                    <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
+                      Recovery task
+                    </p>
+                    <p className="mt-2 text-sm leading-6 text-slate-200">
+                      Revise electric field formula, solve 3 substitution
+                      questions, and compare units in each step.
+                    </p>
+                  </div>
                 </div>
               </div>
 
-              <div className="mt-4 space-y-3">
-                <InsightCard
-                  label="Weak concept"
-                  value="Formula application: E = F/q"
-                  tone="amber"
-                />
-
-                <InsightCard
-                  label="Mistake type"
-                  value="Correct formula selected, wrong substitution step"
-                  tone="red"
-                />
-
-                <InsightCard
-                  label="Teacher action"
-                  value="Group with students struggling in force-charge relation"
-                  tone="blue"
-                />
-
-                <div className="rounded-2xl bg-slate-950 p-4 text-white">
-                  <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
-                    Recovery task
-                  </p>
-                  <p className="mt-2 text-sm leading-6 text-slate-200">
-                    Revise electric field formula, solve 3 substitution
-                    questions, and compare units in each step.
-                  </p>
-                </div>
+              <div className="mt-3 grid grid-cols-3 gap-3">
+                <SmallStat value="18" label="Attempts" />
+                <SmallStat value="5" label="Weak topics" />
+                <SmallStat value="3" label="Groups" />
               </div>
-            </div>
-
-            <div className="mt-3 grid grid-cols-3 gap-3">
-              <SmallStat value="18" label="Attempts" />
-              <SmallStat value="5" label="Weak topics" />
-              <SmallStat value="3" label="Groups" />
             </div>
           </div>
         </div>
@@ -371,7 +382,7 @@ function HeroSection() {
 
 function Metric({ value, label }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+    <div className="hover-lift rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur">
       <p className="text-2xl font-black text-slate-950">{value}</p>
       <p className="mt-1 text-sm font-bold text-slate-500">{label}</p>
     </div>
@@ -380,13 +391,13 @@ function Metric({ value, label }) {
 
 function InsightCard({ label, value, tone }) {
   const tones = {
-    amber: "bg-amber-50 text-amber-800",
-    red: "bg-red-50 text-red-700",
-    blue: "bg-blue-50 text-blue-700",
+    amber: "bg-amber-50 text-amber-800 border-amber-100",
+    red: "bg-red-50 text-red-700 border-red-100",
+    blue: "bg-sky-50 text-sky-700 border-sky-100",
   };
 
   return (
-    <div className={`rounded-2xl p-4 ${tones[tone] || tones.blue}`}>
+    <div className={`rounded-2xl border p-4 ${tones[tone] || tones.blue}`}>
       <p className="text-xs font-black uppercase tracking-[0.16em] opacity-70">
         {label}
       </p>
@@ -397,7 +408,7 @@ function InsightCard({ label, value, tone }) {
 
 function SmallStat({ value, label }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 text-center">
+    <div className="hover-lift rounded-2xl border border-slate-200 bg-white p-4 text-center shadow-sm">
       <p className="text-2xl font-black text-slate-950">{value}</p>
       <p className="mt-1 text-xs font-bold text-slate-500">{label}</p>
     </div>
@@ -406,7 +417,7 @@ function SmallStat({ value, label }) {
 
 function ProblemSection() {
   return (
-    <section id="problem" className="py-16 sm:py-20">
+    <section id="problem" className="section-padding">
       <div className="container-xl">
         <SectionHeader
           eyebrow="The real classroom problem"
@@ -415,12 +426,12 @@ function ProblemSection() {
         />
 
         <div className="mt-10 grid gap-5 md:grid-cols-3">
-          {painPoints.map((item) => (
+          {painPoints.map((item, index) => (
             <article
               key={item.title}
-              className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm"
+              className={`interactive-card animate-fade-up p-6 animation-delay-${index === 0 ? "100" : index === 1 ? "200" : "300"}`}
             >
-              <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
+              <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-50 text-sky-700">
                 <Lightbulb className="h-6 w-6" />
               </div>
               <h3 className="text-lg font-black text-slate-950">
@@ -439,7 +450,7 @@ function ProblemSection() {
 
 function WorkflowSection() {
   return (
-    <section id="workflow" className="bg-white py-16 sm:py-20">
+    <section id="workflow" className="section-padding bg-white">
       <div className="container-xl">
         <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
           <SectionHeader
@@ -453,9 +464,9 @@ function WorkflowSection() {
             {workflow.map((step, index) => (
               <article
                 key={step.title}
-                className="flex gap-5 rounded-[2rem] border border-slate-200 bg-slate-50 p-5"
+                className="group flex gap-5 rounded-[2rem] border border-slate-200 bg-slate-50 p-5 transition duration-300 hover:-translate-y-1 hover:border-sky-200 hover:bg-white hover:shadow-xl hover:shadow-sky-100/60"
               >
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-sm font-black text-white">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl brand-gradient text-sm font-black text-white shadow-lg shadow-sky-200/70 transition group-hover:scale-105">
                   {index + 1}
                 </div>
 
@@ -476,7 +487,7 @@ function WorkflowSection() {
 
 function TeacherStudentSection() {
   return (
-    <section className="py-16 sm:py-20">
+    <section className="section-padding">
       <div className="container-xl">
         <div className="grid gap-6 lg:grid-cols-2">
           <AudienceCard
@@ -506,11 +517,8 @@ function TeacherStudentSection() {
 
 function AudienceCard({ id, icon: Icon, title, description, items, cta, to }) {
   return (
-    <article
-      id={id}
-      className="rounded-[2rem] border border-slate-200 bg-white p-7 shadow-sm"
-    >
-      <div className="flex h-13 w-13 items-center justify-center rounded-2xl bg-slate-950 p-3 text-white">
+    <article id={id} className="interactive-card p-7">
+      <div className="flex h-13 w-13 items-center justify-center rounded-2xl brand-gradient p-3 text-white shadow-lg shadow-sky-200/70">
         <Icon className="h-6 w-6" />
       </div>
 
@@ -528,7 +536,7 @@ function AudienceCard({ id, icon: Icon, title, description, items, cta, to }) {
 
       <Link
         to={to}
-        className="mt-7 inline-flex items-center text-sm font-black text-slate-950 transition hover:text-blue-700"
+        className="mt-7 inline-flex items-center text-sm font-black text-sky-700 transition hover:text-emerald-600"
       >
         {cta}
         <ChevronRight className="ml-1 h-4 w-4" />
@@ -539,7 +547,7 @@ function AudienceCard({ id, icon: Icon, title, description, items, cta, to }) {
 
 function FeatureSection() {
   return (
-    <section id="features" className="bg-white py-16 sm:py-20">
+    <section id="features" className="section-padding bg-white">
       <div className="container-xl">
         <SectionHeader
           eyebrow="Core platform features"
@@ -552,11 +560,8 @@ function FeatureSection() {
             const Icon = feature.icon;
 
             return (
-              <article
-                key={feature.title}
-                className="rounded-[2rem] border border-slate-200 bg-slate-50 p-6 transition hover:-translate-y-1 hover:bg-white hover:shadow-lg hover:shadow-slate-200/70"
-              >
-                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-slate-900 shadow-sm">
+              <article key={feature.title} className="interactive-card p-6">
+                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-50 text-sky-700 shadow-sm">
                   <Icon className="h-6 w-6" />
                 </div>
 
@@ -578,12 +583,15 @@ function FeatureSection() {
 
 function TrustSection() {
   return (
-    <section className="py-16 sm:py-20">
+    <section className="section-padding">
       <div className="container-xl">
-        <div className="rounded-[2rem] border border-slate-200 bg-slate-950 p-8 text-white shadow-xl sm:p-10">
-          <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+        <div className="relative overflow-hidden rounded-[2rem] border border-slate-200 brand-gradient-dark p-8 text-white shadow-xl sm:p-10">
+          <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-sky-300/20 blur-3xl" />
+          <div className="absolute -bottom-20 left-10 h-64 w-64 rounded-full bg-emerald-300/20 blur-3xl" />
+
+          <div className="relative grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-black text-slate-200">
+              <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-black text-slate-100 ring-1 ring-white/10">
                 <ShieldCheck className="h-4 w-4" />
                 Human intelligence first
               </div>
@@ -594,7 +602,7 @@ function TrustSection() {
               </h2>
             </div>
 
-            <p className="text-base leading-8 text-slate-300">
+            <p className="text-base leading-8 text-slate-200">
               NexaLearn is designed as a decision-support platform for learning
               recovery. Teachers create the learning structure, students attempt
               the work, and the system helps organize feedback into useful
@@ -602,7 +610,7 @@ function TrustSection() {
             </p>
           </div>
 
-          <div className="mt-8 grid gap-4 sm:grid-cols-3">
+          <div className="relative mt-8 grid gap-4 sm:grid-cols-3">
             <TrustItem
               title="Teacher-led"
               text="Teachers control tests and interventions."
@@ -624,42 +632,44 @@ function TrustSection() {
 
 function TrustItem({ title, text }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+    <div className="rounded-2xl border border-white/10 bg-white/10 p-5 backdrop-blur transition hover:bg-white/15">
       <h3 className="font-black text-white">{title}</h3>
-      <p className="mt-2 text-sm leading-6 text-slate-400">{text}</p>
+      <p className="mt-2 text-sm leading-6 text-slate-300">{text}</p>
     </div>
   );
 }
 
 function CtaSection() {
   return (
-    <section className="bg-white py-16 sm:py-20">
+    <section className="section-padding bg-white">
       <div className="container-xl">
-        <div className="rounded-[2rem] border border-slate-200 bg-[#f7f8fb] p-8 text-center shadow-sm sm:p-12">
-          <h2 className="mx-auto max-w-3xl text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
-            Build better feedback loops for every student attempt.
-          </h2>
+        <div className="relative overflow-hidden rounded-[2rem] border border-slate-200 bg-slate-50 p-8 text-center shadow-sm sm:p-12">
+          <div className="absolute left-1/2 top-0 h-40 w-80 -translate-x-1/2 rounded-full bg-sky-200/40 blur-3xl" />
 
-          <p className="mx-auto mt-4 max-w-2xl text-base leading-8 text-slate-600">
-            Start with a diagnostic test, identify weak areas, and guide
-            students toward focused recovery.
-          </p>
+          <div className="relative">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl brand-gradient text-white shadow-lg shadow-sky-200/70">
+              <Sparkles className="h-6 w-6" />
+            </div>
 
-          <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-            <Link
-              to="/register"
-              className="inline-flex items-center justify-center rounded-2xl bg-slate-950 px-6 py-4 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-slate-800"
-            >
-              Create Account
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
+            <h2 className="mx-auto max-w-3xl text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
+              Build better feedback loops for every student attempt.
+            </h2>
 
-            <Link
-              to="/login"
-              className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-6 py-4 text-sm font-black text-slate-700 transition hover:-translate-y-0.5 hover:bg-slate-50"
-            >
-              Login
-            </Link>
+            <p className="mx-auto mt-4 max-w-2xl text-base leading-8 text-slate-600">
+              Start with a diagnostic test, identify weak areas, and guide
+              students toward focused recovery.
+            </p>
+
+            <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+              <Link to="/register" className="btn-primary px-6 py-4">
+                Create Account
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+
+              <Link to="/login" className="btn-secondary px-6 py-4">
+                Login
+              </Link>
+            </div>
           </div>
         </div>
       </div>
@@ -671,12 +681,17 @@ function Footer() {
   return (
     <footer className="border-t border-slate-200 bg-white">
       <div className="container-xl py-10">
-        <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr_0.8fr]">
+        <div className="grid gap-8 text-center lg:grid-cols-[1.2fr_0.8fr_0.8fr] lg:text-left">
           <div>
-            <Link to="/" className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-950 text-white">
-                <GraduationCap className="h-6 w-6" />
-              </div>
+            <Link
+              to="/"
+              className="flex items-center justify-center gap-3 lg:justify-start"
+            >
+              <img
+                src={logo}
+                alt="NexaLearn logo"
+                className="h-12 w-12 rounded-xl object-contain"
+              />
 
               <div>
                 <p className="text-lg font-black text-slate-950">NexaLearn</p>
@@ -686,7 +701,7 @@ function Footer() {
               </div>
             </Link>
 
-            <p className="mt-5 max-w-md text-sm leading-7 text-slate-500">
+            <p className="mx-auto mt-5 max-w-md text-sm leading-7 text-slate-500 lg:mx-0">
               NexaLearn helps schools turn assessment results into specific
               learning recovery actions.
             </p>
@@ -695,13 +710,13 @@ function Footer() {
           <div>
             <h3 className="font-black text-slate-950">Product</h3>
             <div className="mt-4 space-y-3 text-sm font-semibold text-slate-500">
-              <a href="#problem" className="block hover:text-slate-950">
+              <a href="#problem" className="block hover:text-sky-700">
                 Problem
               </a>
-              <a href="#workflow" className="block hover:text-slate-950">
+              <a href="#workflow" className="block hover:text-sky-700">
                 Workflow
               </a>
-              <a href="#features" className="block hover:text-slate-950">
+              <a href="#features" className="block hover:text-sky-700">
                 Features
               </a>
             </div>
@@ -731,10 +746,8 @@ function SectionHeader({ eyebrow, title, text, align = "center" }) {
     align === "left" ? "text-left" : "mx-auto max-w-3xl text-center";
 
   return (
-    <div className={alignment}>
-      <span className="inline-flex rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-black text-slate-700">
-        {eyebrow}
-      </span>
+    <div className={`${alignment} animate-fade-up`}>
+      <span className="badge-muted">{eyebrow}</span>
 
       <h2 className="mt-5 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
         {title}

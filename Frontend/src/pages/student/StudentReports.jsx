@@ -125,191 +125,192 @@ export default function StudentReports() {
   }, []);
 
   return (
-    <DashboardLayout role="student">
-      <main className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-6xl space-y-6">
-          <section className="rounded-[2rem] bg-gradient-to-br from-indigo-600 via-blue-600 to-slate-950 p-8 text-white shadow-sm">
-            <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-black">
-                  <BarChart3 className="h-4 w-4" />
-                  Student Reports
-                </div>
+    <DashboardLayout title="My Reports">
+      <div className="mx-auto max-w-7xl space-y-6">
+        <section className="relative overflow-hidden rounded-[2rem] border border-slate-200 bg-[linear-gradient(135deg,#0f172a_0%,#2563eb_52%,#22c55e_100%)] p-6 text-white shadow-xl shadow-sky-500/15 sm:p-8">
+          <div className="absolute -right-20 -top-20 h-72 w-72 rounded-full bg-sky-300/20 blur-3xl" />
+          <div className="absolute -bottom-24 left-10 h-72 w-72 rounded-full bg-emerald-300/20 blur-3xl" />
 
-                <h1 className="mt-6 text-3xl font-black tracking-tight sm:text-4xl">
-                  Track your mistakes and recovery progress.
-                </h1>
-
-                <p className="mt-4 max-w-3xl text-sm leading-7 text-blue-50">
-                  Review your test attempts, weak concepts, mistake patterns,
-                  and AI-powered recovery tasks.
-                </p>
+          <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-black text-white backdrop-blur">
+                <BarChart3 className="h-4 w-4" />
+                Student Reports
               </div>
 
-              <button
-                type="button"
-                onClick={loadReports}
-                disabled={loading}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-6 py-4 text-sm font-black text-indigo-700 transition hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-70"
-              >
-                {loading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <RefreshCw className="h-4 w-4" />
-                )}
-                Refresh
-              </button>
+              <h1 className="mt-6 max-w-3xl text-3xl font-black tracking-tight sm:text-4xl">
+                Track your mistakes and recovery progress.
+              </h1>
+
+              <p className="mt-4 max-w-3xl text-sm leading-7 text-sky-50 sm:text-base">
+                Review your test attempts, weak concepts, mistake patterns, and
+                AI-powered recovery tasks.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={loadReports}
+              disabled={loading}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-6 py-4 text-sm font-black text-sky-700 shadow-lg shadow-slate-950/10 transition hover:-translate-y-0.5 hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {loading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
+              Refresh
+            </button>
+          </div>
+        </section>
+
+        {error ? (
+          <section className="rounded-2xl border border-red-200 bg-red-50 p-5">
+            <div className="flex items-start gap-3 text-red-700">
+              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+              <div>
+                <p className="text-sm font-black">Report loading failed</p>
+                <p className="mt-1 text-sm font-medium">{error}</p>
+              </div>
             </div>
           </section>
+        ) : null}
 
-          {error ? (
-            <section className="rounded-2xl border border-red-200 bg-red-50 p-5">
-              <div className="flex items-start gap-3 text-red-700">
-                <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
-                <div>
-                  <p className="text-sm font-black">Report loading failed</p>
-                  <p className="mt-1 text-sm font-medium">{error}</p>
-                </div>
-              </div>
-            </section>
-          ) : null}
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <StatCard
+            label="Total Attempts"
+            value={summary.total_attempts}
+            icon={<ClipboardList className="h-5 w-5" />}
+            tone="sky"
+          />
 
-          <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <StatCard
-              label="Total Attempts"
-              value={summary.total_attempts}
-              icon={<ClipboardList className="h-5 w-5" />}
-              tone="blue"
-            />
+          <StatCard
+            label="Average Score"
+            value={`${summary.average_score}%`}
+            icon={<Trophy className="h-5 w-5" />}
+            tone="emerald"
+          />
 
-            <StatCard
-              label="Average Score"
-              value={`${summary.average_score}%`}
-              icon={<Trophy className="h-5 w-5" />}
-              tone="emerald"
-            />
+          <StatCard
+            label="Weak Concepts"
+            value={summary.weak_concepts_count}
+            icon={<Target className="h-5 w-5" />}
+            tone="red"
+          />
 
-            <StatCard
-              label="Weak Concepts"
-              value={summary.weak_concepts_count}
-              icon={<Target className="h-5 w-5" />}
-              tone="red"
-            />
+          <StatCard
+            label="Completed Tests"
+            value={summary.completed_tests}
+            icon={<CheckCircle2 className="h-5 w-5" />}
+            tone="blue"
+          />
+        </section>
 
-            <StatCard
-              label="Completed Tests"
-              value={summary.completed_tests}
-              icon={<CheckCircle2 className="h-5 w-5" />}
-              tone="indigo"
-            />
+        {loading ? (
+          <section className="rounded-[2rem] border border-slate-200 bg-white p-12 text-center shadow-sm">
+            <Loader2 className="mx-auto h-10 w-10 animate-spin text-sky-600" />
+            <p className="mt-4 text-sm font-bold text-slate-600">
+              Loading reports...
+            </p>
           </section>
+        ) : attempts.length === 0 ? (
+          <section className="rounded-[2rem] border border-slate-200 bg-white p-12 text-center shadow-sm">
+            <BarChart3 className="mx-auto h-12 w-12 text-slate-300" />
+            <h2 className="mt-5 text-xl font-black text-slate-950">
+              No reports yet
+            </h2>
+            <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
+              Complete a diagnostic test first. Your attempt report and mistake
+              analysis will appear here.
+            </p>
+          </section>
+        ) : (
+          <section className="grid gap-6 lg:grid-cols-[1fr_360px]">
+            <div className="space-y-4">
+              {attempts.map((attempt) => (
+                <AttemptCard key={attempt.id} attempt={attempt} />
+              ))}
+            </div>
 
-          {loading ? (
-            <section className="rounded-[2rem] border border-slate-200 bg-white p-12 text-center shadow-sm">
-              <Loader2 className="mx-auto h-10 w-10 animate-spin text-indigo-600" />
-              <p className="mt-4 text-sm font-bold text-slate-600">
-                Loading reports...
-              </p>
-            </section>
-          ) : attempts.length === 0 ? (
-            <section className="rounded-[2rem] border border-slate-200 bg-white p-12 text-center shadow-sm">
-              <BarChart3 className="mx-auto h-12 w-12 text-slate-300" />
-              <h2 className="mt-5 text-xl font-black text-slate-950">
-                No reports yet
-              </h2>
-              <p className="mt-2 text-sm text-slate-500">
-                Complete a diagnostic test first. Your attempt report and
-                mistake analysis will appear here.
-              </p>
-            </section>
-          ) : (
-            <section className="grid gap-6 lg:grid-cols-[1fr_360px]">
-              <div className="space-y-4">
-                {attempts.map((attempt) => (
-                  <AttemptCard key={attempt.id} attempt={attempt} />
-                ))}
-              </div>
+            <aside className="space-y-4">
+              <Panel title="Weak Concepts">
+                {weakConcepts.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {weakConcepts.map((concept) => (
+                      <span
+                        key={concept}
+                        className="rounded-full bg-amber-50 px-3 py-1 text-xs font-black text-amber-700 ring-1 ring-amber-100"
+                      >
+                        {concept}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <EmptySmall text="No weak concepts detected yet." />
+                )}
+              </Panel>
 
-              <aside className="space-y-4">
-                <Panel title="Weak Concepts">
-                  {weakConcepts.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {weakConcepts.map((concept) => (
-                        <span
-                          key={concept}
-                          className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700"
-                        >
-                          {concept}
+              <Panel title="Mistake Patterns">
+                {mistakePatterns.length > 0 ? (
+                  <div className="space-y-3">
+                    {mistakePatterns.map((item) => (
+                      <div
+                        key={item.type}
+                        className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3"
+                      >
+                        <span className="text-sm font-bold text-slate-700">
+                          {item.type}
                         </span>
-                      ))}
-                    </div>
-                  ) : (
-                    <EmptySmall text="No weak concepts detected yet." />
-                  )}
-                </Panel>
+                        <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-sky-700 ring-1 ring-sky-100">
+                          {item.count}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <EmptySmall text="No mistake patterns yet." />
+                )}
+              </Panel>
 
-                <Panel title="Mistake Patterns">
-                  {mistakePatterns.length > 0 ? (
-                    <div className="space-y-3">
-                      {mistakePatterns.map((item) => (
-                        <div
-                          key={item.type}
-                          className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3"
-                        >
-                          <span className="text-sm font-bold text-slate-700">
-                            {item.type}
-                          </span>
-                          <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-slate-900">
-                            {item.count}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <EmptySmall text="No mistake patterns yet." />
-                  )}
-                </Panel>
-
-                <Panel title="Recovery Tasks">
-                  {recoveryTasks.length > 0 ? (
-                    <div className="space-y-3">
-                      {recoveryTasks.map((task) => (
-                        <div
-                          key={task.id}
-                          className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
-                        >
-                          <p className="text-sm font-black text-slate-950">
-                            {task.concept}
-                          </p>
-                          <p className="mt-2 text-sm leading-6 text-slate-600">
-                            {task.task}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <EmptySmall text="No recovery tasks yet." />
-                  )}
-                </Panel>
-              </aside>
-            </section>
-          )}
-        </div>
-      </main>
+              <Panel title="Recovery Tasks">
+                {recoveryTasks.length > 0 ? (
+                  <div className="space-y-3">
+                    {recoveryTasks.map((task) => (
+                      <div
+                        key={task.id}
+                        className="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:border-sky-200 hover:bg-sky-50/50"
+                      >
+                        <p className="text-sm font-black text-slate-950">
+                          {task.concept}
+                        </p>
+                        <p className="mt-2 text-sm leading-6 text-slate-600">
+                          {task.task}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <EmptySmall text="No recovery tasks yet." />
+                )}
+              </Panel>
+            </aside>
+          </section>
+        )}
+      </div>
     </DashboardLayout>
   );
 }
 
 function StatCard({ label, value, icon, tone }) {
   const tones = {
-    blue: "bg-blue-50 text-blue-600",
-    emerald: "bg-emerald-50 text-emerald-600",
-    red: "bg-red-50 text-red-600",
-    indigo: "bg-indigo-50 text-indigo-600",
+    sky: "bg-sky-50 text-sky-700 ring-sky-100",
+    blue: "bg-blue-50 text-blue-700 ring-blue-100",
+    emerald: "bg-emerald-50 text-emerald-700 ring-emerald-100",
+    red: "bg-red-50 text-red-700 ring-red-100",
   };
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-sky-200 hover:shadow-xl hover:shadow-sky-100/60">
       <div className="flex items-center justify-between gap-4">
         <div>
           <p className="text-sm font-bold text-slate-500">{label}</p>
@@ -317,8 +318,8 @@ function StatCard({ label, value, icon, tone }) {
         </div>
 
         <div
-          className={`flex h-12 w-12 items-center justify-center rounded-2xl ${
-            tones[tone] || tones.blue
+          className={`flex h-12 w-12 items-center justify-center rounded-2xl ring-1 ${
+            tones[tone] || tones.sky
           }`}
         >
           {icon}
@@ -330,7 +331,7 @@ function StatCard({ label, value, icon, tone }) {
 
 function AttemptCard({ attempt }) {
   return (
-    <article className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+    <article className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-sky-200 hover:shadow-xl hover:shadow-sky-100/60">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <h3 className="text-lg font-black text-slate-950">
@@ -348,8 +349,8 @@ function AttemptCard({ attempt }) {
           ) : null}
         </div>
 
-        <div className="rounded-2xl bg-slate-50 px-5 py-4 text-center">
-          <p className="text-xs font-bold text-slate-500">Score</p>
+        <div className="rounded-2xl bg-sky-50 px-5 py-4 text-center ring-1 ring-sky-100">
+          <p className="text-xs font-bold text-sky-700">Score</p>
           <p className="mt-1 text-2xl font-black text-slate-950">
             {attempt.percentage || 0}%
           </p>
@@ -366,13 +367,16 @@ function AttemptCard({ attempt }) {
               <p className="text-sm font-black text-slate-950">
                 {mistake.weak_concept}
               </p>
-              <p className="mt-1 text-xs font-bold uppercase tracking-wide text-red-500">
+
+              <p className="mt-1 text-xs font-black uppercase tracking-wide text-red-500">
                 {mistake.mistake_type}
               </p>
+
               <p className="mt-2 text-sm leading-6 text-slate-600">
                 {mistake.explanation || "No explanation saved."}
               </p>
-              <p className="mt-2 text-sm font-bold text-indigo-700">
+
+              <p className="mt-2 text-sm font-black text-sky-700">
                 {mistake.revision_task}
               </p>
             </div>
@@ -385,7 +389,7 @@ function AttemptCard({ attempt }) {
 
 function Panel({ title, children }) {
   return (
-    <section className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
+    <section className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm transition duration-300 hover:border-sky-200 hover:shadow-xl hover:shadow-sky-100/60">
       <h3 className="text-base font-black text-slate-950">{title}</h3>
       <div className="mt-4">{children}</div>
     </section>

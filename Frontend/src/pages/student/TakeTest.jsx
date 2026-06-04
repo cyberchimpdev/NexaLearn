@@ -28,13 +28,13 @@ function TakeTest() {
     fetchTest();
   }, [testId]);
 
-  const normalizeQuestions = (data) => {
+  function normalizeQuestions(data) {
     if (Array.isArray(data?.questions)) return data.questions;
     if (Array.isArray(data?.test?.questions)) return data.test.questions;
     return [];
-  };
+  }
 
-  const fetchTest = async () => {
+  async function fetchTest() {
     try {
       setLoading(true);
       setError("");
@@ -55,7 +55,7 @@ function TakeTest() {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   const questions = useMemo(() => {
     return Array.isArray(test?.questions) ? test.questions : [];
@@ -66,14 +66,19 @@ function TakeTest() {
       .length;
   }, [answers]);
 
-  const handleAnswerChange = (questionId, value) => {
+  const progress =
+    questions.length > 0
+      ? Math.round((answeredCount / questions.length) * 100)
+      : 0;
+
+  function handleAnswerChange(questionId, value) {
     setAnswers((previous) => ({
       ...previous,
       [questionId]: value,
     }));
-  };
+  }
 
-  const buildPayloadAnswers = () => {
+  function buildPayloadAnswers() {
     return questions.map((question, index) => {
       const questionId = question.id || question.question_id || index + 1;
 
@@ -83,9 +88,9 @@ function TakeTest() {
         student_answer: answers[questionId] || "",
       };
     });
-  };
+  }
 
-  const handleSubmit = async () => {
+  async function handleSubmit() {
     if (questions.length === 0) {
       setError("This test has no questions.");
       return;
@@ -123,68 +128,78 @@ function TakeTest() {
     } finally {
       setSubmitting(false);
     }
-  };
+  }
 
   if (loading) {
     return (
-      <DashboardLayout role="student">
-        <main className="flex min-h-screen items-center justify-center bg-slate-50">
+      <DashboardLayout title="Take Test">
+        <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center">
           <div className="flex items-center gap-3 rounded-3xl border border-slate-200 bg-white px-6 py-5 shadow-sm">
-            <Loader2 className="h-5 w-5 animate-spin text-indigo-600" />
+            <Loader2 className="h-5 w-5 animate-spin text-sky-600" />
             <p className="text-sm font-semibold text-slate-700">
               Loading test...
             </p>
           </div>
-        </main>
+        </div>
       </DashboardLayout>
     );
   }
 
   return (
-    <DashboardLayout role="student">
-      <main className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-5xl space-y-6">
-          <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-            <Link
-              to="/student/tests"
-              className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 transition hover:text-indigo-600"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back to tests
-            </Link>
+    <DashboardLayout title="Take Test">
+      <div className="mx-auto max-w-6xl space-y-6">
+        <section className="relative overflow-hidden rounded-[2rem] border border-slate-200 bg-[linear-gradient(135deg,#0f172a_0%,#2563eb_52%,#22c55e_100%)] p-6 text-white shadow-xl shadow-sky-500/15 sm:p-8">
+          <div className="absolute -right-20 -top-20 h-72 w-72 rounded-full bg-sky-300/20 blur-3xl" />
+          <div className="absolute -bottom-24 left-10 h-72 w-72 rounded-full bg-emerald-300/20 blur-3xl" />
 
-            <div className="mt-5 flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-              <div>
-                <h1 className="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
-                  {test?.title || "Diagnostic Test"}
-                </h1>
+          <div className="relative grid gap-8 lg:grid-cols-[1fr_320px] lg:items-start">
+            <div>
+              <Link
+                to="/student/tests"
+                className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-black text-white backdrop-blur transition hover:bg-white/15"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back to tests
+              </Link>
 
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-                  {test?.description ||
-                    "Answer the questions below. NexaLearn will analyze your answers and detect weak concepts."}
-                </p>
+              <h1 className="mt-6 max-w-3xl text-3xl font-black tracking-tight sm:text-4xl">
+                {test?.title || "Diagnostic Test"}
+              </h1>
 
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <InfoBadge
-                    icon={BookOpen}
-                    text={test?.subject || "General"}
-                  />
-                  <InfoBadge
-                    icon={Clock}
-                    text={`${test?.duration_minutes || 30} min`}
-                  />
-                  <InfoBadge
-                    icon={CheckCircle2}
-                    text={`${answeredCount}/${questions.length} answered`}
-                  />
-                </div>
+              <p className="mt-4 max-w-3xl text-sm leading-7 text-sky-50 sm:text-base">
+                {test?.description ||
+                  "Answer the questions below. NexaLearn will analyze your answers and detect weak concepts."}
+              </p>
+
+              <div className="mt-5 flex flex-wrap gap-2">
+                <InfoBadge icon={BookOpen} text={test?.subject || "General"} />
+                <InfoBadge
+                  icon={Clock}
+                  text={`${test?.duration_minutes || 30} min`}
+                />
+                <InfoBadge
+                  icon={CheckCircle2}
+                  text={`${answeredCount}/${questions.length} answered`}
+                />
+              </div>
+            </div>
+
+            <div className="rounded-[1.5rem] border border-white/15 bg-white/10 p-5 backdrop-blur">
+              <p className="text-sm font-bold text-sky-100">Progress</p>
+              <p className="mt-2 text-4xl font-black text-white">{progress}%</p>
+
+              <div className="mt-5 h-3 overflow-hidden rounded-full bg-white/15">
+                <div
+                  className="h-full rounded-full bg-white transition-all duration-300"
+                  style={{ width: `${progress}%` }}
+                />
               </div>
 
               <button
                 type="button"
                 onClick={handleSubmit}
                 disabled={submitting}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+                className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-black text-sky-700 shadow-lg shadow-slate-950/10 transition hover:-translate-y-0.5 hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {submitting ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -194,107 +209,141 @@ function TakeTest() {
                 {submitting ? "Submitting..." : "Submit Test"}
               </button>
             </div>
-          </section>
+          </div>
+        </section>
 
-          {error && (
-            <div className="flex items-start gap-3 rounded-3xl border border-red-200 bg-red-50 p-5 text-sm text-red-700">
+        {error ? (
+          <section className="rounded-2xl border border-red-200 bg-red-50 p-5">
+            <div className="flex items-start gap-3 text-red-700">
               <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
-              <p>{error}</p>
+              <p className="text-sm font-medium">{error}</p>
             </div>
-          )}
+          </section>
+        ) : null}
 
-          {questions.length === 0 ? (
-            <section className="rounded-3xl border border-slate-200 bg-white p-10 text-center shadow-sm">
-              <h2 className="text-xl font-bold text-slate-950">
-                No questions found
-              </h2>
-              <p className="mt-2 text-sm text-slate-600">
-                This test does not have questions yet.
-              </p>
-            </section>
-          ) : (
-            <section className="space-y-5">
-              {questions.map((question, index) => {
-                const questionId =
-                  question.id || question.question_id || index + 1;
+        {questions.length === 0 ? (
+          <section className="rounded-[2rem] border border-slate-200 bg-white p-12 text-center shadow-sm">
+            <BookOpen className="mx-auto h-12 w-12 text-slate-300" />
+            <h2 className="mt-5 text-xl font-black text-slate-950">
+              No questions found
+            </h2>
+            <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-600">
+              This test does not have questions yet.
+            </p>
+          </section>
+        ) : (
+          <section className="space-y-5">
+            {questions.map((question, index) => {
+              const questionId =
+                question.id || question.question_id || index + 1;
 
-                return (
-                  <article
-                    key={questionId}
-                    className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6"
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <p className="text-sm font-bold text-indigo-600">
-                          Question {index + 1}
-                        </p>
+              return (
+                <QuestionCard
+                  key={questionId}
+                  question={question}
+                  index={index}
+                  questionId={questionId}
+                  value={answers[questionId] || ""}
+                  onChange={handleAnswerChange}
+                />
+              );
+            })}
+          </section>
+        )}
 
-                        <h2 className="mt-2 text-base font-semibold leading-7 text-slate-950">
-                          {question.question_text ||
-                            question.text ||
-                            question.question ||
-                            "Question text unavailable"}
-                        </h2>
-                      </div>
-
-                      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                        {question.marks || 1} marks
-                      </span>
-                    </div>
-
-                    {question.question_type === "mcq" &&
-                    Array.isArray(question.options) &&
-                    question.options.length > 0 ? (
-                      <div className="mt-5 space-y-3">
-                        {question.options.map((option, optionIndex) => (
-                          <label
-                            key={`${questionId}-${optionIndex}`}
-                            className="flex cursor-pointer items-center gap-3 rounded-2xl border border-slate-200 p-4 transition hover:bg-slate-50"
-                          >
-                            <input
-                              type="radio"
-                              name={`question-${questionId}`}
-                              value={option}
-                              checked={answers[questionId] === option}
-                              onChange={(event) =>
-                                handleAnswerChange(
-                                  questionId,
-                                  event.target.value,
-                                )
-                              }
-                              className="h-4 w-4 text-indigo-600"
-                            />
-                            <span className="text-sm font-medium text-slate-700">
-                              {option}
-                            </span>
-                          </label>
-                        ))}
-                      </div>
-                    ) : (
-                      <textarea
-                        value={answers[questionId] || ""}
-                        onChange={(event) =>
-                          handleAnswerChange(questionId, event.target.value)
-                        }
-                        rows={5}
-                        placeholder="Write your answer here..."
-                        className="mt-5 w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
-                      />
-                    )}
-                  </article>
-                );
-              })}
-            </section>
-          )}
-        </div>
-      </main>
+        {questions.length > 0 ? (
+          <div className="sticky bottom-5 z-20 flex justify-end">
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={submitting}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[linear-gradient(135deg,#0ea5e9_0%,#2563eb_55%,#22c55e_100%)] px-6 py-4 text-sm font-black text-white shadow-2xl shadow-sky-500/25 transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {submitting ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <Save className="h-5 w-5" />
+              )}
+              {submitting ? "Submitting..." : "Submit Test"}
+            </button>
+          </div>
+        ) : null}
+      </div>
     </DashboardLayout>
+  );
+}
+
+function QuestionCard({ question, index, questionId, value, onChange }) {
+  const questionText =
+    question.question_text ||
+    question.text ||
+    question.question ||
+    "Question text unavailable";
+
+  return (
+    <article className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm transition duration-300 hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-xl hover:shadow-sky-100/60 sm:p-6">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-sm font-black text-sky-700">
+            Question {index + 1}
+          </p>
+
+          <h2 className="mt-2 text-base font-bold leading-7 text-slate-950">
+            {questionText}
+          </h2>
+        </div>
+
+        <span className="rounded-full bg-sky-50 px-3 py-1 text-xs font-black text-sky-700 ring-1 ring-sky-100">
+          {question.marks || 1} marks
+        </span>
+      </div>
+
+      {question.question_type === "mcq" &&
+      Array.isArray(question.options) &&
+      question.options.length > 0 ? (
+        <div className="mt-5 space-y-3">
+          {question.options.map((option, optionIndex) => {
+            const selected = value === option;
+
+            return (
+              <label
+                key={`${questionId}-${optionIndex}`}
+                className={[
+                  "flex cursor-pointer items-center gap-3 rounded-2xl border p-4 transition",
+                  selected
+                    ? "border-sky-300 bg-sky-50 text-sky-900 shadow-sm"
+                    : "border-slate-200 bg-white text-slate-700 hover:border-sky-200 hover:bg-sky-50/60",
+                ].join(" ")}
+              >
+                <input
+                  type="radio"
+                  name={`question-${questionId}`}
+                  value={option}
+                  checked={selected}
+                  onChange={(event) => onChange(questionId, event.target.value)}
+                  className="h-4 w-4 accent-sky-600"
+                />
+                <span className="text-sm font-bold">{option}</span>
+              </label>
+            );
+          })}
+        </div>
+      ) : (
+        <textarea
+          value={value}
+          onChange={(event) => onChange(questionId, event.target.value)}
+          rows={5}
+          placeholder="Write your answer here..."
+          className="mt-5 w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm leading-7 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
+        />
+      )}
+    </article>
   );
 }
 
 function InfoBadge({ icon: Icon, text }) {
   return (
-    <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+    <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-black text-white backdrop-blur">
       <Icon className="h-3.5 w-3.5" />
       {text}
     </span>
