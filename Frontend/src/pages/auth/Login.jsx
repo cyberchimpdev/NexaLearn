@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { GoogleLogin } from "@react-oauth/google";
 import {
   AlertCircle,
   ArrowRight,
@@ -13,6 +14,7 @@ import {
 } from "lucide-react";
 
 import { useAuth } from "../../context/AuthContext";
+import { loginWithGoogle } from "../../services/authService";
 import logo from "../../assets/logo.png";
 
 function Login() {
@@ -26,6 +28,7 @@ function Login() {
 
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState("");
 
   function handleChange(event) {
@@ -46,22 +49,23 @@ function Login() {
       responseData?.user_type ||
       "";
 
-    if (typeof role === "string" && role.toLowerCase() === "teacher") {
-      return "/teacher";
-    }
-
-    return "/student";
+    return typeof role === "string" && role.toLowerCase() === "teacher"
+      ? "/teacher"
+      : "/student";
   }
 
   async function handleSubmit(event) {
     event.preventDefault();
 
-    if (!formData.email.trim()) {
+    const email = formData.email.trim().toLowerCase();
+    const password = formData.password;
+
+    if (!email) {
       setError("Email is required.");
       return;
     }
 
-    if (!formData.password.trim()) {
+    if (!password.trim()) {
       setError("Password is required.");
       return;
     }
@@ -71,27 +75,41 @@ function Login() {
 
     try {
       const response = await login({
-        email: formData.email.trim(),
-        password: formData.password,
+        email,
+        password,
       });
 
       navigate(resolveRedirectPath(response), { replace: true });
     } catch (err) {
-      const apiError = err?.response?.data;
-
-      const message =
-        apiError?.detail ||
-        apiError?.error ||
-        apiError?.message ||
-        (typeof apiError === "object"
-          ? Object.values(apiError).flat().join(" ")
-          : "") ||
-        "Login failed. Please check your credentials and try again.";
-
-      setError(message);
+      setError(getReadableError(err));
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleGoogleSuccess(credentialResponse) {
+    const credential = credentialResponse?.credential;
+
+    if (!credential) {
+      setError("Google login failed. Credential was not received.");
+      return;
+    }
+
+    setGoogleLoading(true);
+    setError("");
+
+    try {
+      const response = await loginWithGoogle(credential);
+      navigate(resolveRedirectPath(response), { replace: true });
+    } catch (err) {
+      setError(getReadableError(err, "Google login failed. Please try again."));
+    } finally {
+      setGoogleLoading(false);
+    }
+  }
+
+  function handleGoogleError() {
+    setError("Google login was cancelled or failed.");
   }
 
   return (
@@ -104,7 +122,7 @@ function Login() {
           <div className="relative">
             <Link to="/" className="group inline-flex items-center gap-3">
               <div className="relative">
-                <div className="absolute inset-0 rounded-2xl bg-white/20 blur-lg opacity-0 transition group-hover:opacity-100" />
+                <div className="absolute inset-0 rounded-2xl bg-white/20 opacity-0 blur-lg transition group-hover:opacity-100" />
                 <img
                   src={logo}
                   alt="NexaLearn logo"
@@ -202,7 +220,41 @@ function Login() {
                 </div>
               ) : null}
 
-              <form onSubmit={handleSubmit} className="mt-6 space-y-5">
+              <div className="mt-6">
+                <div
+                  className={
+                    googleLoading ? "pointer-events-none opacity-60" : ""
+                  }
+                >
+                  <GoogleLogin
+                    onSuccess={handleGoogleSuccess}
+                    onError={handleGoogleError}
+                    theme="outline"
+                    size="large"
+                    text="continue_with"
+                    shape="rectangular"
+                    width="100%"
+                    useOneTap={false}
+                  />
+                </div>
+
+                {googleLoading ? (
+                  <div className="mt-3 flex items-center justify-center gap-2 text-sm font-bold text-slate-500">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Connecting Google account...
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="my-6 flex items-center gap-4">
+                <div className="h-px flex-1 bg-slate-200" />
+                <span className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">
+                  or
+                </span>
+                <div className="h-px flex-1 bg-slate-200" />
+              </div>
+
+              <form onSubmit={handleSubmit} className="space-y-5">
                 <TextField
                   label="Email"
                   id="email"
@@ -256,7 +308,7 @@ function Login() {
 
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || googleLoading}
                   className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[linear-gradient(135deg,#0ea5e9_0%,#2563eb_55%,#22c55e_100%)] px-5 text-sm font-black text-white shadow-lg shadow-sky-500/25 transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {loading ? (
@@ -307,6 +359,30 @@ function TextField({ label, id, icon: Icon, ...props }) {
         />
       </div>
     </div>
+  );
+}
+
+function getReadableError(
+  err,
+  fallback = "Login failed. Please check your credentials and try again.",
+) {
+  const apiError = err?.response?.data;
+
+  if (!apiError) {
+    return fallback;
+  }
+
+  if (typeof apiError === "string") {
+    return apiError;
+  }
+
+  return (
+    apiError?.detail ||
+    apiError?.error ||
+    apiError?.message ||
+    apiError?.non_field_errors?.[0] ||
+    Object.values(apiError).flat().join(" ") ||
+    fallback
   );
 }
 

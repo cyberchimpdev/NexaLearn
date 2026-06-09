@@ -4,7 +4,12 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .serializers import LoginSerializer, RegisterSerializer, UserSerializer
+from .serializers import (
+    GoogleLoginSerializer,
+    LoginSerializer,
+    RegisterSerializer,
+    UserSerializer,
+)
 
 
 class RegisterView(generics.CreateAPIView):
@@ -21,7 +26,27 @@ class LoginView(APIView):
             context={"request": request},
         )
         serializer.is_valid(raise_exception=True)
-        return Response(serializer.validated_data, status=status.HTTP_200_OK)
+
+        return Response(
+            serializer.validated_data,
+            status=status.HTTP_200_OK,
+        )
+
+
+class GoogleLoginView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        serializer = GoogleLoginSerializer(
+            data=request.data,
+            context={"request": request},
+        )
+        serializer.is_valid(raise_exception=True)
+
+        return Response(
+            serializer.validated_data,
+            status=status.HTTP_200_OK,
+        )
 
 
 class ProfileView(APIView):
@@ -29,4 +54,8 @@ class ProfileView(APIView):
 
     def get(self, request):
         serializer = UserSerializer(request.user)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+
+        return Response(
+            serializer.data,
+            status=status.HTTP_200_OK,
+        )

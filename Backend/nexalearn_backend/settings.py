@@ -1,31 +1,58 @@
 from __future__ import annotations
 
 import os
-from pathlib import Path
 from datetime import timedelta
+from pathlib import Path
 
 from dotenv import load_dotenv
 
+
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Loads Backend/.env
 load_dotenv(BASE_DIR / ".env")
 
-SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-dev-key")
-DEBUG = os.getenv("DEBUG", "True") == "True"
 
-ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
+SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-dev-key")
+DEBUG = os.getenv("DEBUG", "True").lower() == "true"
+
+ALLOWED_HOSTS = [
+    "127.0.0.1",
+    "localhost",
+]
+
+
+# ---------------------------------------------------------------------
+# External API / OAuth
+# ---------------------------------------------------------------------
+
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "").strip()
+
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash").strip()
+GEMINI_MAX_OUTPUT_TOKENS = int(os.getenv("GEMINI_MAX_OUTPUT_TOKENS", "700"))
+GEMINI_TEMPERATURE = float(os.getenv("GEMINI_TEMPERATURE", "0.2"))
+
+
+# ---------------------------------------------------------------------
+# Apps
+# ---------------------------------------------------------------------
 
 INSTALLED_APPS = [
     "jazzmin",
+
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+
     "rest_framework",
     "rest_framework_simplejwt",
     "corsheaders",
-    "apps.accounts",
+
+    "apps.accounts.apps.AccountsConfig",
     "apps.personalization",
     "apps.tests_app",
     "apps.attempts",
@@ -33,16 +60,25 @@ INSTALLED_APPS = [
     "apps.ai_agent",
 ]
 
+
+# ---------------------------------------------------------------------
+# Middleware
+# ---------------------------------------------------------------------
+
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
+
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
+
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
+
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+
 
 ROOT_URLCONF = "nexalearn_backend.urls"
 
@@ -63,6 +99,11 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "nexalearn_backend.wsgi.application"
 
+
+# ---------------------------------------------------------------------
+# Database
+# ---------------------------------------------------------------------
+
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
@@ -70,27 +111,25 @@ DATABASES = {
     }
 }
 
-LANGUAGE_CODE = "en-us"
-TIME_ZONE = "Asia/Kathmandu"
-USE_I18N = True
-USE_TZ = True
 
-STATIC_URL = "static/"
-DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+# ---------------------------------------------------------------------
+# Auth
+# ---------------------------------------------------------------------
 
 AUTH_USER_MODEL = "accounts.User"
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
+AUTHENTICATION_BACKENDS = [
+    "django.contrib.auth.backends.ModelBackend",
 ]
 
-CORS_ALLOW_CREDENTIALS = True
+
+# ---------------------------------------------------------------------
+# DRF / JWT
+# ---------------------------------------------------------------------
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
-        "rest_framework.authentication.SessionAuthentication",
     ),
     "DEFAULT_PERMISSION_CLASSES": (
         "rest_framework.permissions.IsAuthenticated",
@@ -100,9 +139,40 @@ REST_FRAMEWORK = {
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(days=1),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    "AUTH_HEADER_TYPES": ("Bearer",),
 }
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash").strip()
-GEMINI_MAX_OUTPUT_TOKENS = int(os.getenv("GEMINI_MAX_OUTPUT_TOKENS", "700"))
-GEMINI_TEMPERATURE = float(os.getenv("GEMINI_TEMPERATURE", "0.2"))
+
+# ---------------------------------------------------------------------
+# CORS / CSRF
+# ---------------------------------------------------------------------
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+
+CORS_ALLOW_CREDENTIALS = True
+
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+
+
+# ---------------------------------------------------------------------
+# Internationalization
+# ---------------------------------------------------------------------
+
+LANGUAGE_CODE = "en-us"
+TIME_ZONE = "Asia/Kathmandu"
+USE_I18N = True
+USE_TZ = True
+
+
+# ---------------------------------------------------------------------
+# Static
+# ---------------------------------------------------------------------
+
+STATIC_URL = "static/"
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
