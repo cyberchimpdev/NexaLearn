@@ -13,6 +13,18 @@ const PUBLIC_ENDPOINTS = [
   "/accounts/google/",
 ];
 
+function clearAuthStorage() {
+  localStorage.removeItem("accessToken");
+  localStorage.removeItem("refreshToken");
+  localStorage.removeItem("user");
+
+  localStorage.removeItem("access");
+  localStorage.removeItem("token");
+  localStorage.removeItem("access_token");
+  localStorage.removeItem("refresh");
+  localStorage.removeItem("refresh_token");
+}
+
 api.interceptors.request.use(
   (config) => {
     const requestUrl = config.url || "";
@@ -47,14 +59,7 @@ api.interceptors.response.use(
       detail === "Token is invalid or expired";
 
     if (error.response?.status === 401 && isInvalidToken) {
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("refreshToken");
-      localStorage.removeItem("user");
-      localStorage.removeItem("access");
-      localStorage.removeItem("token");
-      localStorage.removeItem("access_token");
-      localStorage.removeItem("refresh");
-      localStorage.removeItem("refresh_token");
+      clearAuthStorage();
     }
 
     return Promise.reject(error);

@@ -29,13 +29,20 @@ function persistAuth(data) {
 }
 
 export async function registerUser(userData) {
-  const response = await api.post("/accounts/register/", userData);
+  const payload = {
+    full_name: userData.full_name?.trim(),
+    email: userData.email?.trim().toLowerCase(),
+    password: userData.password,
+    role: userData.role,
+  };
+
+  const response = await api.post("/accounts/register/", payload);
   return response.data;
 }
 
 export async function loginUser(credentials) {
   const response = await api.post("/accounts/login/", {
-    email: credentials.email,
+    email: credentials.email?.trim().toLowerCase(),
     password: credentials.password,
   });
 

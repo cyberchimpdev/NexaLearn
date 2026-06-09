@@ -130,10 +130,6 @@ class GoogleLoginSerializer(serializers.Serializer):
     def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
         credential = attrs.get("credential", "").strip()
 
-        print("GOOGLE DEBUG - credential exists:", bool(credential))
-        print("GOOGLE DEBUG - credential length:", len(credential))
-        print("GOOGLE DEBUG - backend GOOGLE_CLIENT_ID:", settings.GOOGLE_CLIENT_ID)
-
         if not credential:
             raise serializers.ValidationError(
                 {"detail": "Google credential is required."}
@@ -141,7 +137,7 @@ class GoogleLoginSerializer(serializers.Serializer):
 
         if not settings.GOOGLE_CLIENT_ID:
             raise serializers.ValidationError(
-                {"detail": "Google OAuth is not configured in backend .env."}
+                {"detail": "Google OAuth is not configured in backend."}
             )
 
         try:
@@ -149,20 +145,14 @@ class GoogleLoginSerializer(serializers.Serializer):
                 credential,
                 google_requests.Request(),
                 settings.GOOGLE_CLIENT_ID,
+                clock_skew_in_seconds=10,
             )
-
-            print("GOOGLE DEBUG - payload aud:", payload.get("aud"))
-            print("GOOGLE DEBUG - payload email:", payload.get("email"))
-
         except ValueError as exc:
             print("GOOGLE VERIFY ERROR:", str(exc))
-            print("EXPECTED BACKEND CLIENT ID:", settings.GOOGLE_CLIENT_ID)
+            print("EXPECTED GOOGLE_CLIENT_ID:", settings.GOOGLE_CLIENT_ID)
 
             raise serializers.ValidationError(
-                {
-                    "detail": "Invalid Google credential.",
-                    "debug": str(exc) if settings.DEBUG else "Verification failed.",
-                }
+                {"detail": "Invalid Google credential."}
             )
 
         email = payload.get("email", "").strip().lower()
